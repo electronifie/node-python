@@ -27,7 +27,7 @@ describe('node-python', function () {
     it('should throw an Error when importing a module that includes bad syntax', function () {
     should(function () {
         python.import('test');
-    }).throw(/exceptions.SyntaxError/)
+    }).throw(/Python Error: SyntaxError/)
     });
   });
 });

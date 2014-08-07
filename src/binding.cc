@@ -42,30 +42,7 @@ Handle<Value> import(const Arguments& args) {
 
     if (PyErr_Occurred()) {
 
-        Local<v8::String> errMsg = v8::String::Concat(v8::String::New("Could not import "), args[0]->ToString());
-        
-        PyObject *ptype, *pvalue, *ptraceback;
-        PyErr_Fetch(&ptype, &pvalue, &ptraceback);
-        PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
-        char *pStrErrorMessage = PyString_AsString(PyObject_Str(pvalue));;
-        
-        if (ptype != NULL) {
-            errMsg = v8::String::Concat(errMsg, v8::String::New(PyString_AsString(PyObject_Str(ptype))));
-        }
-
-        if (pvalue != NULL) {
-            errMsg = v8::String::Concat(errMsg, v8::String::New("\nPython Error: "));
-            errMsg = v8::String::Concat(errMsg, v8::String::New(PyString_AsString(PyObject_Str(pvalue))));
-        }
-
-        if (ptraceback != NULL) {
-            errMsg = v8::String::Concat(errMsg, v8::String::New("\n"));
-            errMsg = v8::String::Concat(errMsg, v8::String::New(PyString_AsString(PyObject_Str(ptraceback))));
-        }
-
-        return ThrowException(
-            Exception::Error(String::New(*String::Utf8Value(errMsg)))
-        );
+        return ThrowPythonException();
     }
 
     if (!module) {
