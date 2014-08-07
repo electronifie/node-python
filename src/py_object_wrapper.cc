@@ -1,4 +1,3 @@
-
 #include "py_object_wrapper.h"
 #include "utils.h"
 
@@ -74,7 +73,6 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     else {
         Py_XDECREF(obj);
     }
-
     return scope.Close(jsVal);
 }
 
@@ -221,9 +219,17 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
     PyObject* args_tuple = PyTuple_New(len);
     for(int i = 0; i < len; ++i) {
         PyObject* py_arg = ConvertToPython(args[i]);
+        if (PyErr_Occurred()) {
+            return ThrowPythonException();
+        }
         PyTuple_SET_ITEM(args_tuple, i, py_arg);
     }
     PyObject* result = PyObject_CallObject(mPyObject, args_tuple);
+
+    if (PyErr_Occurred()) {
+        return ThrowPythonException();
+    }
+
     Py_XDECREF(args_tuple);
     if(result) {
         return scope.Close(PyObjectWrapper::New(result));
@@ -243,6 +249,6 @@ PyObject* PyObjectWrapper::InstanceGet(const string& key) {
     if(PyObject_HasAttrString(mPyObject, key.c_str())) {
         PyObject* attribute = PyObject_GetAttrString(mPyObject, key.c_str());
         return attribute;
-    }
+    } 
     return (PyObject*)NULL;
 }
