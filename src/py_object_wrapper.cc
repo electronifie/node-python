@@ -1,3 +1,4 @@
+#include <node.h>
 #include "py_object_wrapper.h"
 #include "utils.h"
 
@@ -180,32 +181,51 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     } else if(value->IsNumber()) {
         return PyFloat_FromDouble(value->NumberValue());
     } else if(value->IsObject()) {
-        Local<Object> obj = value->ToObject();
-        if(!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
-            PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(value->ToObject());
-            PyObject* pyobj = python_object->InstanceGetPyObject();
-            return pyobj;
-        } else {
-            Local<Array> property_names = obj->GetPropertyNames();
-            len = property_names->Length();
-            PyObject* py_dict = PyDict_New();
-            for(int i = 0; i < len; ++i) {
-                Local<String> str = property_names->Get(i)->ToString();
-                Local<Value> js_val = obj->Get(str);
-                PyDict_SetItemString(py_dict, *String::Utf8Value(str), ConvertToPython(js_val));
-            }
-            return py_dict;
-        }
+    	if(value->IsArray()) {
+			Local<Array> array = Array::Cast(*value);
+			len = array->Length();
+			PyObject* py_list = PyList_New(len);
+			for(int i = 0; i < len; ++i) {
+				Local<Object> obj = array->Get(i)->ToObject();
+				if (!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
+					PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(obj);
+					PyObject* pyobj = python_object->InstanceGetPyObject();
+					PyList_SET_ITEM(py_list, i, pyobj);
+				} else {
+					Local<Value> js_val = array->Get(i);
+					PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
+				}
+			}
+			return py_list;
+		} else {
+			Local<Object> obj = value->ToObject();
+			if(!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
+				PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(value->ToObject());
+				PyObject* pyobj = python_object->InstanceGetPyObject();
+				return pyobj;
+			} else {
+				Local<Array> property_names = obj->GetPropertyNames();
+				len = property_names->Length();
+				PyObject* py_dict = PyDict_New();
+				for(int i = 0; i < len; ++i) {
+					Local<String> str = property_names->Get(i)->ToString();
+					Local<Value> js_val = obj->Get(str);
+					PyDict_SetItemString(py_dict, *String::Utf8Value(str), ConvertToPython(js_val));
+				}
+				return py_dict;
+			}
+		}
+
         return NULL;
     } else if(value->IsArray()) {
-        Local<Array> array = Array::Cast(*value);
-        len = array->Length();
-        PyObject* py_list = PyList_New(len);
-        for(int i = 0; i < len; ++i) {
-            Local<Value> js_val = array->Get(i);
-            PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
-        }
-        return py_list;
+		Local<Array> array = Array::Cast(*value);
+		len = array->Length();
+		PyObject* py_list = PyList_New(len);
+		for(int i = 0; i < len; ++i) {
+			Local<Value> js_val = array->Get(i);
+			PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
+		}
+		return py_list;
     } else if(value->IsUndefined()) {
         Py_RETURN_NONE;
     }
@@ -217,6 +237,7 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
     HandleScope scope;
     int len = args.Length();
     PyObject* args_tuple = PyTuple_New(len);
+
     for(int i = 0; i < len; ++i) {
         PyObject* py_arg = ConvertToPython(args[i]);
         if (PyErr_Occurred()) {
@@ -225,12 +246,12 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
         PyTuple_SET_ITEM(args_tuple, i, py_arg);
     }
     PyObject* result = PyObject_CallObject(mPyObject, args_tuple);
-
     if (PyErr_Occurred()) {
         return ThrowPythonException();
     }
 
     Py_XDECREF(args_tuple);
+
     if(result) {
         return scope.Close(PyObjectWrapper::New(result));
     } else {

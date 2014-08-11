@@ -16,7 +16,7 @@ Handle<Value> eval(const Arguments& args) {
         );
     }
     
-    PyCodeObject* code = (PyCodeObject*) Py_CompileString(*String::Utf8Value(args[0]->ToString()), "test", Py_eval_input);
+    PyCodeObject* code = (PyCodeObject*) Py_CompileString(*String::Utf8Value(args[0]->ToString()), "eval", Py_eval_input);
     PyObject* main_module = PyImport_AddModule("__main__");
     PyObject* global_dict = PyModule_GetDict(main_module);
     PyObject* local_dict = PyDict_New();

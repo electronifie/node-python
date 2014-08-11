@@ -35,9 +35,7 @@ Handle<Value> ThrowPythonException() {
         pyth_module = PyImport_Import(module_name);
         
         Py_DECREF(module_name);
-
         pyth_func = PyObject_GetAttrString(pyth_module, "format_exception");
-
         Py_DECREF(pyth_module);
         
         if (pyth_func) {
