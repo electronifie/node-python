@@ -23,7 +23,18 @@ Handle<Value> eval(const Arguments& args) {
     PyObject* obj = PyEval_EvalCode(code, global_dict, local_dict);
     PyObject* result = PyObject_Str(obj);
 
+    Py_XDECREF(code);
+    Py_XDECREF(global_dict);
+    Py_XDECREF(local_dict);
+    Py_XDECREF(obj);
+
     return scope.Close(PyObjectWrapper::New(result));
+}
+
+Handle<Value> finalize(const Arguments& args) {
+	HandleScope scope;
+    Py_Finalize();
+    return scope.Close(Undefined());
 }
 
 Handle<Value> import(const Arguments& args) {
@@ -61,10 +72,16 @@ void init (Handle<Object> exports) {
 
     // how to schedule Py_Finalize(); to be called when process exits?
 
-    // module.exports.import
+    // module.exports.eval
     exports->Set(
         String::NewSymbol("eval"),
         FunctionTemplate::New(eval)->GetFunction()
+    );
+
+    // module.exports.finalize
+    exports->Set(
+        String::NewSymbol("finalize"),
+        FunctionTemplate::New(finalize)->GetFunction()
     );
 
     // module.exports.import
