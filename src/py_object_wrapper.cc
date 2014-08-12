@@ -178,7 +178,13 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     HandleScope scope;
     if(value->IsString()) {
         return PyString_FromString(*String::Utf8Value(value->ToString()));
-    } else if(value->IsNumber()) {
+    } else if (value->IsBoolean()) {
+    	if (value->ToBoolean()->IsTrue()) {
+    		return Py_True;
+    	} else {
+    		return Py_False;
+    	}
+	} else if(value->IsNumber()) {
         return PyFloat_FromDouble(value->NumberValue());
     } else if(value->IsObject()) {
     	if(value->IsArray()) {
