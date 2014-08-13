@@ -16,6 +16,7 @@ class PyObjectWrapper : public node::ObjectWrap {
     PyObject* mPyObject;
     public:
         static Persistent<FunctionTemplate> py_function_template;
+        PyObjectWrapper() : node::ObjectWrap(), mPyObject() {};
         PyObjectWrapper(PyObject* obj) : node::ObjectWrap(), mPyObject(obj) {};
         virtual ~PyObjectWrapper() {
             Py_XDECREF(mPyObject);

@@ -1,6 +1,7 @@
 #include <node.h>
 #include "py_object_wrapper.h"
 #include "utils.h"
+#include <uv.h>
 
 Persistent<FunctionTemplate> PyObjectWrapper::py_function_template;
 
@@ -114,11 +115,69 @@ Handle<Value> PyObjectWrapper::ValueOfAccessor(Local<String> property, const Acc
     return scope.Close(func->GetFunction());
 }
 
+struct Baton {
+    uv_work_t request;
+    const Arguments* args;
+    Persistent<Function> callback;
+    PyObjectWrapper pyobjwrap;
+    int error_code;
+    std::string error_message;
+    Handle<Value> result;
+};
+
+void AsyncWork(uv_work_t *req) {
+	Baton* baton = static_cast<Baton*>(req->data);
+	Handle<Value> result = baton->pyobjwrap.InstanceCall(*baton->args);
+	baton->result = result;
+
+}
+
+void AsyncAfter(uv_work_t* req, int signal) {
+    HandleScope scope;
+    Baton* baton = static_cast<Baton*>(req->data);
+
+    if (baton->error_code != 0) {
+    	Local<Value> err = Exception::Error(String::New(baton->error_message.c_str()));
+		// Prepare the parameters for the callback function.
+		const unsigned argc = 1;
+		Local<Value> argv[argc] = { err };
+		baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
+    } else {
+    	const unsigned argc = 2;
+		Local<Value> argv[argc] = {
+			Local<Value>::New(Null()),
+			Local<Value>::New(baton->result)
+		};
+		baton->callback->Call(Context::GetCurrent()->Global(), argc, argv);
+    }
+
+    baton->callback.Dispose();
+    delete baton;
+}
+
 Handle<Value> PyObjectWrapper::Call(const Arguments& args) {
     HandleScope scope;
+
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
-    Handle<Value> result = pyobjwrap->InstanceCall(args);
-    return scope.Close(result);
+
+    Local<Value> lastArg(args[args.Length()]);
+
+    if (lastArg->IsFunction()) {
+		Local<Function> callback = Local<Function>::Cast(args[0]);
+		const unsigned argc = 1;
+		Baton* baton = new Baton();
+		baton->args = &args;
+		baton->pyobjwrap = *pyobjwrap;
+		baton->request.data = baton;
+		baton->callback = Persistent<Function>::New(callback);
+		printf("created baton\n");
+		uv_queue_work(uv_default_loop(), &baton->request, AsyncWork, AsyncAfter);
+
+		return scope.Close(Undefined());
+    } else {
+        Handle<Value> result = pyobjwrap->InstanceCall(args);
+        return scope.Close(result);
+    }
 }
 
 Handle<Value> PyObjectWrapper::ToString(const Arguments& args) {
