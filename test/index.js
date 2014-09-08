@@ -30,4 +30,59 @@ describe('node-python', function () {
     }).throw(/Python Error: SyntaxError/)
     });
   });
+  it('should convert javascript booleans to python booleans', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName(true);
+    type.should.equal('bool');
+  });
+  it('should convert javascript date to python date', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName(new Date());
+    type.should.equal('datetime');
+  });
+  it('should convert javascript numbers to python floats', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName(1);
+    type.should.equal('float');
+  });
+  it('should convert javascript arrays to python list', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName([]);
+    type.should.equal('list');
+  });
+  it('should convert javascript objects to python dictionaries', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName({});
+    type.should.equal('dict');
+  });
+  it('should convert javascript nested objects correctly', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName2({
+      value: 1
+    }, 'value');
+    type.should.equal('float');
+    var type = test.getPythonTypeName2({
+      value: true
+    }, 'value');
+    type.should.equal('bool');
+    var type = test.getPythonTypeName2({
+      value: new Date()
+    }, 'value');
+    type.should.equal('datetime');
+    var type = test.getPythonTypeName2({
+      value: {}
+    }, 'value');
+    type.should.equal('dict');
+    var type = test.getPythonTypeName2({
+      value: ['one', 'two', 'three']
+    }, 'value');
+    type.should.equal('list');
+    var i = 0, arr = [];
+    while (i < 10000) {
+      arr.push(Math.random().toString())
+      i++;
+    }
+    var type = test.getPythonTypeName(arr);
+    type.should.equal('list');
+  });
 });

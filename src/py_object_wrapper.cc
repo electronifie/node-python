@@ -1,11 +1,15 @@
 #include <node.h>
 #include "py_object_wrapper.h"
 #include "utils.h"
+#include "datetime.h"
 
 Persistent<FunctionTemplate> PyObjectWrapper::py_function_template;
 
 void PyObjectWrapper::Initialize() {
     HandleScope scope;
+
+    PyDateTime_IMPORT;
+
     Local<FunctionTemplate> fn_tpl = FunctionTemplate::New();
     Local<ObjectTemplate> proto = fn_tpl->PrototypeTemplate();
     Local<ObjectTemplate> obj_tpl = fn_tpl->InstanceTemplate();
@@ -176,6 +180,7 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
 PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     int len;
     HandleScope scope;
+
     if(value->IsString()) {
         return PyString_FromString(*String::Utf8Value(value->ToString()));
     } else if (value->IsBoolean()) {
@@ -186,6 +191,14 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     	}
 	} else if(value->IsNumber()) {
         return PyFloat_FromDouble(value->NumberValue());
+    } else if(value->IsDate()) {
+    	Handle<Date> date = Handle<Date>::Cast(value);
+        PyObject* floatObj = PyFloat_FromDouble(date->NumberValue() / 1000.0 ); // javascript returns milliseconds since epoch. python wants seconds since epoch
+    	PyObject* timeTuple = Py_BuildValue("(O)", floatObj);
+        Py_DECREF(floatObj);
+        PyObject* dateTime = PyDateTime_FromTimestamp(timeTuple);
+        Py_DECREF(timeTuple);
+        return dateTime;
     } else if(value->IsObject()) {
     	if(value->IsArray()) {
 			Local<Array> array = Array::Cast(*value);
@@ -221,7 +234,6 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
 				return py_dict;
 			}
 		}
-
         return NULL;
     } else if(value->IsArray()) {
 		Local<Array> array = Array::Cast(*value);

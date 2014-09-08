@@ -1,6 +1,6 @@
 #include <node.h>
 #include <Python.h>
-
+#include <datetime.h>
 #include "py_object_wrapper.h"
 #include "utils.h"
 
@@ -52,7 +52,6 @@ Handle<Value> import(const Arguments& args) {
     module = PyImport_Import(module_name);    
 
     if (PyErr_Occurred()) {
-
         return ThrowPythonException();
     }
 
@@ -66,8 +65,8 @@ Handle<Value> import(const Arguments& args) {
 
 void init (Handle<Object> exports) {
     HandleScope scope;
-    Py_Initialize();
 
+    Py_Initialize();
     PyObjectWrapper::Initialize();
 
     // how to schedule Py_Finalize(); to be called when process exits?
