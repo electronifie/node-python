@@ -30,6 +30,16 @@ describe('node-python', function () {
     }).throw(/Python Error: SyntaxError/)
     });
   });
+  it('should convert javascript null to python NoneType', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName(null);
+    type.should.equal('NoneType');
+  });
+  it('should convert javascript undefined to python NoneType', function () {
+    test = python.import('test2');
+    var type = test.getPythonTypeName(undefined);
+    type.should.equal('NoneType');
+  });
   it('should convert javascript booleans to python booleans', function () {
     test = python.import('test2');
     var type = test.getPythonTypeName(true);

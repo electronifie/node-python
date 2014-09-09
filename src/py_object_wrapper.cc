@@ -189,6 +189,8 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     	} else {
     		return Py_False;
     	}
+    } else if (value->IsNull() || value->IsUndefined()) {
+    	return Py_None;
 	} else if(value->IsNumber()) {
         return PyFloat_FromDouble(value->NumberValue());
     } else if(value->IsDate()) {
