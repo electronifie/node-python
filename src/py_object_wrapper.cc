@@ -1,7 +1,9 @@
 #include <node.h>
 #include "py_object_wrapper.h"
+#include <datetime.h>
+#include <time.h>
 #include "utils.h"
-#include "datetime.h"
+
 
 Persistent<FunctionTemplate> PyObjectWrapper::py_function_template;
 
@@ -39,6 +41,68 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     if(obj == Py_None) {
         jsVal = Local<Value>::New(Undefined());
     }
+
+    else if (PyDate_CheckExact(obj)) {
+        printf("%s\n", "wat");
+    }
+
+    else if (PyDateTime_CheckExact(obj)) {
+        printf("%s\n", "wat");
+        /* Fields are packed into successive bytes, each viewed as unsigned and
+         * big-endian, unless otherwise noted:
+         *
+         * byte offset
+         *  0 		year     2 bytes, 1-9999
+         *  2		month    1 byte, 1-12
+         *  3 		day      1 byte, 1-31
+         *  4		hour     1 byte, 0-23
+         *  5 		minute   1 byte, 0-59
+         *  6 		second   1 byte, 0-59
+         *  7 		usecond  3 bytes, 0-999999
+         * 10
+         */
+
+         /*
+            #define PyDateTime_GET_YEAR(o)     ((((PyDateTime_Date*)o)->data[0] << 8) | \
+                                     ((PyDateTime_Date*)o)->data[1])
+            #define PyDateTime_GET_MONTH(o)    (((PyDateTime_Date*)o)->data[2])
+            #define PyDateTime_GET_DAY(o)      (((PyDateTime_Date*)o)->data[3])
+
+            #define PyDateTime_DATE_GET_HOUR(o)        (((PyDateTime_DateTime*)o)->data[4])
+            #define PyDateTime_DATE_GET_MINUTE(o)      (((PyDateTime_DateTime*)o)->data[5])
+            #define PyDateTime_DATE_GET_SECOND(o)      (((PyDateTime_DateTime*)o)->data[6])
+            #define PyDateTime_DATE_GET_MICROSECOND(o)      \
+                ((((PyDateTime_DateTime*)o)->data[7] << 16) |   \
+                     (((PyDateTime_DateTime*)o)->data[8] << 8)  |   \
+                      ((PyDateTime_DateTime*)o)->data[9])
+
+
+            #define PyDateTime_TIME_GET_HOUR(o)        (((PyDateTime_Time*)o)->data[0])
+            #define PyDateTime_TIME_GET_MINUTE(o)      (((PyDateTime_Time*)o)->data[1])
+            #define PyDateTime_TIME_GET_SECOND(o)      (((PyDateTime_Time*)o)->data[2])
+            #define PyDateTime_TIME_GET_MICROSECOND(o)      \
+                ((((PyDateTime_Time*)o)->data[3] << 16) |   \
+                     (((PyDateTime_Time*)o)->data[4] << 8)  |   \
+                      ((PyDateTime_Time*)o)->data[5])
+        */
+
+        double microseconds = (double) 
+                    ((((PyDateTime_DateTime*)obj)->data[0] << 4096) |   \
+                     (((PyDateTime_DateTime*)obj)->data[1] << 2048) |   \
+                     (((PyDateTime_DateTime*)obj)->data[2] << 1024) |   \
+                     (((PyDateTime_DateTime*)obj)->data[3] << 512) |   \
+                     (((PyDateTime_DateTime*)obj)->data[4] << 256) |   \
+                     (((PyDateTime_DateTime*)obj)->data[5] << 128) |   \ 
+                     (((PyDateTime_DateTime*)obj)->data[6] << 64) |   \
+                     (((PyDateTime_DateTime*)obj)->data[6] << 32) |   \
+                     (((PyDateTime_DateTime*)obj)->data[7] << 16) |   \
+                     (((PyDateTime_DateTime*)obj)->data[8] << 8)  |   \
+                      ((PyDateTime_DateTime*)obj)->data[9]);
+        printf("%d\n", microseconds);
+
+        jsVal = v8::Date::New(microseconds);
+    }
+
     // double
     else if(PyFloat_CheckExact(obj)) {
         double d = PyFloat_AsDouble(obj);
@@ -70,6 +134,7 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     }
     
     if(jsVal.IsEmpty()) {
+        // printf("%s\n", "wat");
         Local<Object> jsObj = py_function_template->GetFunction()->NewInstance();
         PyObjectWrapper* wrapper = new PyObjectWrapper(obj);
         wrapper->Wrap(jsObj);
@@ -136,6 +201,7 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
     HandleScope scope;
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     PyObject* py_obj = pyobjwrap->InstanceGetPyObject();
+
     if(PyCallable_Check(py_obj)) {
         Local<FunctionTemplate> call = FunctionTemplate::New(Call);
         return scope.Close(call->GetFunction());

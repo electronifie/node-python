@@ -34,11 +34,16 @@ describe('node-python', function () {
     test = python.import('test2');
     var type = test.getPythonTypeName(true);
     type.should.equal('bool');
+    var value = test.getPythonValue(true);
+    value.should.equal(true);
   });
   it('should convert javascript date to python date', function () {
     test = python.import('test2');
-    var type = test.getPythonTypeName(new Date());
+    var now = new Date();
+    var type = test.getPythonTypeName(now);
     type.should.equal('datetime');
+    var value = test.getPythonValue(now);
+    value.total_seconds().should.equal(now.timtestamp());
   });
   it('should convert javascript numbers to python floats', function () {
     test = python.import('test2');
