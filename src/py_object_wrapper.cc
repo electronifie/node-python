@@ -39,6 +39,28 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     if(obj == Py_None) {
         jsVal = Local<Value>::New(Undefined());
     }
+    else if(PyDict_Check(obj)) {
+        Local<Object> dict = v8::Object::New();
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(obj, &pos, &key, &value)) {
+            Handle<Value> jsKey = PyObjectWrapper::New(key);
+            Handle<Value> jsValue = PyObjectWrapper::New(value);
+            dict->Set(jsKey, jsValue);
+        }
+        jsVal = dict;
+    }
+    else if(PyList_CheckExact(obj)) {
+        int size = PyList_Size(obj);
+        Local<Array> array = v8::Array::New(size);
+        PyObject* value;
+        for(int i = 0; i < size; i++ ){
+            value = PyList_GetItem(obj, i);
+            Handle<Value> jsValue = PyObjectWrapper::New(value);
+            array->Set(i, jsValue);
+        }
+        jsVal = array;
+    }
     // double
     else if(PyFloat_CheckExact(obj)) {
         double d = PyFloat_AsDouble(obj);

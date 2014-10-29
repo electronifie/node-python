@@ -95,4 +95,18 @@ describe('node-python', function () {
     var type = test.getPythonTypeName(arr);
     type.should.equal('list');
   });
+  it('should convert python dicts to javascript objects', function () {
+    test = python.import('test2');
+    var value = test.getPythonValue({
+      value: 1
+    });
+    value.should.have.property('value', 1);
+  });
+  it('should convert python lists to javascript arrays', function () {
+    test = python.import('test2');
+    var value = test.getPythonValue([ 1, 2, 3]);
+    value.should.containEql(1);
+    value.should.containEql(2);
+    value.should.containEql(3);
+  });
 });
