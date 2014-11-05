@@ -154,17 +154,20 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
     if(obj == Py_None) {
         jsVal = Local<Value>::New(Undefined());
     }
+    // integer (can be 64b)
+    else if(PyInt_CheckExact(obj)) {
+        long i = PyInt_AsLong(obj);
+        jsVal = Local<Value>::New(Number::New((double) i));
+    }
     // double
     else if(PyFloat_CheckExact(obj)) {
-        printf("float\n");
         double d = PyFloat_AsDouble(obj);
         jsVal = Local<Value>::New(Number::New(d));
     }
-    // integer (can be 64b)
-    else if(PyInt_CheckExact(obj)) {
-        printf("int\n");
-        long i = PyInt_AsLong(obj);
-        jsVal = Local<Value>::New(Number::New((double) i));
+    // double
+    else if(PyLong_CheckExact(obj)) {
+        double d = PyFloat_AsDouble(obj);
+        jsVal = Local<Value>::New(Number::New(d));
     }
     // string
     else if(PyString_CheckExact(obj)) {
@@ -192,8 +195,6 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
             dict->Set(jsKey, jsValue);    
         }
         jsVal = dict;
-        Py_XDECREF(key);
-        Py_XDECREF(value);
     }
     // list
     else if(PyList_CheckExact(obj)) {
@@ -203,15 +204,10 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         for(int i = 0; i < size; i++ ){
             value = PyList_GetItem(obj, i);
             char *format;
-            if(PyDict_CheckExact(value)) {
-                printf("damn! dict!\n");
-            }
-            // PyArg_ParseTuple(value, format);
             Handle<Value> jsValue = ConvertToJavaScript(value);
             array->Set(i, jsValue);
         }
         jsVal = array;
-        Py_XDECREF(value);
     }
     
     if(jsVal.IsEmpty()) {

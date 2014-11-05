@@ -109,4 +109,18 @@ describe('node-python', function () {
     value.should.containEql(2);
     value.should.containEql(3);
   });
+  it('should convert basic python dict to javascript object', function () {
+    test = python.import('test3');
+    var obj = test.getPythonDict();
+    obj.should.have.property('one', 1);
+    obj.should.have.property('two', '2');
+    obj.should.have.property('three', 3);
+  });
+  it('should convert basic python list to javascript array', function () {
+    test = python.import('test3');
+    var obj = test.getPythonList();
+    obj.should.have.containEql(1);
+    obj.should.have.containEql('2');
+    obj.should.have.containEql('three');
+  });
 });
