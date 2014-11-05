@@ -36,16 +36,14 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     Local<Value> jsObj;
 
     try {
-        jsObj = PyObjectWrapper::ConvertToJavaScript(obj);
+        jsObj = ConvertToJavaScript(obj);
     } catch (int e) {
         if (PyErr_Occurred()) {
-            Py_XDECREF(obj);
             return ThrowPythonException();
         } 
     }
 
     if (PyErr_Occurred()) {
-        Py_XDECREF(obj);
         return ThrowPythonException();
     }  
 
@@ -130,9 +128,9 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
         PyObject* keys = PyMapping_Keys(py_obj);
         PyObject* values = PyMapping_Values(py_obj);
         for(int i = 0; i < len; ++i) {
-            PyObject *key = PySequence_GetItem(keys, i),
-                *value = PySequence_GetItem(values, i),
-                *key_as_string = PyObject_Str(key);
+            PyObject *key = PySequence_GetItem(keys, i);
+            PyObject *value = PySequence_GetItem(values, i);
+            PyObject *key_as_string = PyObject_Str(key);
             char* cstr = PyString_AsString(key_as_string);
 
             Local<Object> jsobj = PyObjectWrapper::py_function_template->GetFunction()->NewInstance();
@@ -153,21 +151,31 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
     // undefined
     if(obj == Py_None) {
         jsVal = Local<Value>::New(Undefined());
+        Py_XDECREF(obj);
     }
     // integer (can be 64b)
     else if(PyInt_CheckExact(obj)) {
         long i = PyInt_AsLong(obj);
         jsVal = Local<Value>::New(Number::New((double) i));
+        Py_XDECREF(obj);
     }
     // double
     else if(PyFloat_CheckExact(obj)) {
         double d = PyFloat_AsDouble(obj);
         jsVal = Local<Value>::New(Number::New(d));
+        Py_XDECREF(obj);
     }
-    // double
+    // long
     else if(PyLong_CheckExact(obj)) {
-        double d = PyFloat_AsDouble(obj);
+        double d;
+        try{
+            d = PyLong_AsDouble(obj);
+        }
+        catch (OverflowError error) {
+
+        }
         jsVal = Local<Value>::New(Number::New(d));
+        Py_XDECREF(obj);
     }
     // string
     else if(PyString_CheckExact(obj)) {
@@ -177,12 +185,14 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
             jsVal = Local<Value>::New(String::New(str));
         } else {
         }
+        Py_XDECREF(obj);
     }
     else if(PyBool_Check(obj)) {
         int b = PyObject_IsTrue(obj);
         if(b != -1) {
             jsVal = Local<Value>::New(Boolean::New(b));
         }
+        Py_XDECREF(obj);
     }
     // dict
     else if(PyDict_CheckExact(obj)) {
@@ -215,9 +225,6 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         PyObjectWrapper* wrapper = new PyObjectWrapper(obj);
         wrapper->Wrap(jsObj);
         jsVal = Local<Value>::New(jsObj);
-    }
-    else {
-        Py_XDECREF(obj);
     }
     
     return jsVal;
