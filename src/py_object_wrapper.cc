@@ -205,6 +205,10 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
             dict->Set(jsKey, jsValue);    
         }
         jsVal = dict;
+        // TODO: figure out correct way to DECREF a dict
+        // Py_XDECREF(key);
+        // Py_XDECREF(value);
+        // Py_XDECREF(obj);
     }
     // list
     else if(PyList_CheckExact(obj)) {
@@ -218,6 +222,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
             array->Set(i, jsValue);
         }
         jsVal = array;
+        Py_XDECREF(obj);
     }
     
     if(jsVal.IsEmpty()) {
