@@ -43,6 +43,8 @@ class PyObjectWrapper : public node::ObjectWrap {
         static Handle<Value> ValueOf(const Arguments& args);
 
         static PyObject* ConvertToPython(const Handle<Value>& value);
+        
+        static Local<Value> ConvertToJavaScript(PyObject* obj);
 
         PyObject* InstanceGetPyObject() {
             return mPyObject;

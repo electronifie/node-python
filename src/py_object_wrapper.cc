@@ -33,74 +33,23 @@ void PyObjectWrapper::Initialize() {
 
 Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     HandleScope scope;
-    Local<Value> jsVal;
+    Local<Value> jsObj;
 
-    // undefined
-    if(obj == Py_None) {
-        jsVal = Local<Value>::New(Undefined());
-    }
-    else if(PyDict_Check(obj)) {
-        Local<Object> dict = v8::Object::New();
-        PyObject *key, *value;
-        Py_ssize_t pos = 0;
-        while (PyDict_Next(obj, &pos, &key, &value)) {
-            Handle<Value> jsKey = PyObjectWrapper::New(key);
-            Handle<Value> jsValue = PyObjectWrapper::New(value);
-            dict->Set(jsKey, jsValue);
-        }
-        jsVal = dict;
-    }
-    else if(PyList_CheckExact(obj)) {
-        int size = PyList_Size(obj);
-        Local<Array> array = v8::Array::New(size);
-        PyObject* value;
-        for(int i = 0; i < size; i++ ){
-            value = PyList_GetItem(obj, i);
-            Handle<Value> jsValue = PyObjectWrapper::New(value);
-            array->Set(i, jsValue);
-        }
-        jsVal = array;
-    }
-    // double
-    else if(PyFloat_CheckExact(obj)) {
-        double d = PyFloat_AsDouble(obj);
-        jsVal = Local<Value>::New(Number::New(d));
-    }
-    // integer (can be 64b)
-    else if(PyInt_CheckExact(obj)) {
-        long i = PyInt_AsLong(obj);
-        jsVal = Local<Value>::New(Number::New((double) i));
-    }
-    // string
-    else if(PyString_CheckExact(obj)) {
-        // ref to internal representation: no need to dealloc
-        char *str = PyString_AsString(obj);
-        if(str) {
-            jsVal = Local<Value>::New(String::New(str));
-        }
-    }
-    else if(PyBool_Check(obj)) {
-        int b = PyObject_IsTrue(obj);
-        if(b != -1) {
-            jsVal = Local<Value>::New(Boolean::New(b));
-        }
+    try {
+        jsObj = PyObjectWrapper::ConvertToJavaScript(obj);
+    } catch (int e) {
+        if (PyErr_Occurred()) {
+            Py_XDECREF(obj);
+            return ThrowPythonException();
+        } 
     }
 
-    if(PyErr_Occurred()) {
+    if (PyErr_Occurred()) {
         Py_XDECREF(obj);
         return ThrowPythonException();
-    }
-    
-    if(jsVal.IsEmpty()) {
-        Local<Object> jsObj = py_function_template->GetFunction()->NewInstance();
-        PyObjectWrapper* wrapper = new PyObjectWrapper(obj);
-        wrapper->Wrap(jsObj);
-        jsVal = Local<Value>::New(jsObj);
-    }
-    else {
-        Py_XDECREF(obj);
-    }
-    return scope.Close(jsVal);
+    }  
+
+    return scope.Close(jsObj);
 }
 
 Handle<Value> PyObjectWrapper::Get(Local<String> key, const AccessorInfo& info) {
@@ -199,78 +148,152 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
     return Undefined();
 }
 
+Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
+    Local<Value> jsVal;
+    // undefined
+    if(obj == Py_None) {
+        jsVal = Local<Value>::New(Undefined());
+    }
+    // double
+    else if(PyFloat_CheckExact(obj)) {
+        printf("float\n");
+        double d = PyFloat_AsDouble(obj);
+        jsVal = Local<Value>::New(Number::New(d));
+    }
+    // integer (can be 64b)
+    else if(PyInt_CheckExact(obj)) {
+        printf("int\n");
+        long i = PyInt_AsLong(obj);
+        jsVal = Local<Value>::New(Number::New((double) i));
+    }
+    // string
+    else if(PyString_CheckExact(obj)) {
+        // ref to internal representation: no need to dealloc
+        char *str = PyString_AsString(obj);
+        if (str) {
+            jsVal = Local<Value>::New(String::New(str));
+        } else {
+        }
+    }
+    else if(PyBool_Check(obj)) {
+        int b = PyObject_IsTrue(obj);
+        if(b != -1) {
+            jsVal = Local<Value>::New(Boolean::New(b));
+        }
+    }
+    // dict
+    else if(PyDict_CheckExact(obj)) {
+        Local<Object> dict = v8::Object::New();
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(obj, &pos, &key, &value)) {
+            Handle<Value> jsKey = ConvertToJavaScript(key);
+            Handle<Value> jsValue = ConvertToJavaScript(value);
+            dict->Set(jsKey, jsValue);    
+        }
+        jsVal = dict;
+        Py_XDECREF(key);
+        Py_XDECREF(value);
+    }
+    // list
+    else if(PyList_CheckExact(obj)) {
+        int size = PyList_Size(obj);
+        Local<Array> array = v8::Array::New(size);
+        PyObject* value;
+        for(int i = 0; i < size; i++ ){
+            value = PyList_GetItem(obj, i);
+            char *format;
+            if(PyDict_CheckExact(value)) {
+                printf("damn! dict!\n");
+            }
+            // PyArg_ParseTuple(value, format);
+            Handle<Value> jsValue = ConvertToJavaScript(value);
+            array->Set(i, jsValue);
+        }
+        jsVal = array;
+        Py_XDECREF(value);
+    }
+    
+    if(jsVal.IsEmpty()) {
+        Local<Object> jsObj = py_function_template->GetFunction()->NewInstance();
+        PyObjectWrapper* wrapper = new PyObjectWrapper(obj);
+        wrapper->Wrap(jsObj);
+        jsVal = Local<Value>::New(jsObj);
+    }
+    else {
+        Py_XDECREF(obj);
+    }
+    
+    return jsVal;
+}
+
 PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     int len;
-    HandleScope scope;
-
-    if(value->IsString()) {
-        return PyString_FromString(*String::Utf8Value(value->ToString()));
+    if (value->IsString()) {
+        PyObject* str = PyString_FromString(*String::Utf8Value(value->ToString()));
+        return str;
     } else if (value->IsBoolean()) {
-    	if (value->ToBoolean()->IsTrue()) {
-    		return Py_True;
-    	} else {
-    		return Py_False;
-    	}
+        if (value->ToBoolean()->IsTrue()) {
+            return Py_True;
+        } else {
+            return Py_False;
+        }
     } else if (value->IsNull() || value->IsUndefined()) {
-    	return Py_None;
-	} else if(value->IsNumber()) {
+        return Py_None;
+    } else if (value->IsNumber()) {
         return PyFloat_FromDouble(value->NumberValue());
-    } else if(value->IsDate()) {
-    	Handle<Date> date = Handle<Date>::Cast(value);
+    } else if (value->IsDate()) {
+        Handle<Date> date = Handle<Date>::Cast(value);
         PyObject* floatObj = PyFloat_FromDouble(date->NumberValue() / 1000.0 ); // javascript returns milliseconds since epoch. python wants seconds since epoch
-    	PyObject* timeTuple = Py_BuildValue("(O)", floatObj);
+        PyObject* timeTuple = Py_BuildValue("(O)", floatObj);
         Py_DECREF(floatObj);
         PyObject* dateTime = PyDateTime_FromTimestamp(timeTuple);
         Py_DECREF(timeTuple);
         return dateTime;
-    } else if(value->IsObject()) {
-    	if(value->IsArray()) {
-			Local<Array> array = Array::Cast(*value);
-			len = array->Length();
-			PyObject* py_list = PyList_New(len);
-			for(int i = 0; i < len; ++i) {
-				Local<Object> obj = array->Get(i)->ToObject();
-				if (!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
-					PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(obj);
-					PyObject* pyobj = python_object->InstanceGetPyObject();
-					PyList_SET_ITEM(py_list, i, pyobj);
-				} else {
-					Local<Value> js_val = array->Get(i);
-					PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
-				}
-			}
-			return py_list;
-		} else {
-			Local<Object> obj = value->ToObject();
-			if(!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
-				PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(value->ToObject());
-				PyObject* pyobj = python_object->InstanceGetPyObject();
-				return pyobj;
-			} else {
-				Local<Array> property_names = obj->GetPropertyNames();
-				len = property_names->Length();
-				PyObject* py_dict = PyDict_New();
-				for(int i = 0; i < len; ++i) {
-					Local<String> str = property_names->Get(i)->ToString();
-					Local<Value> js_val = obj->Get(str);
-					PyDict_SetItemString(py_dict, *String::Utf8Value(str), ConvertToPython(js_val));
-				}
-				return py_dict;
-			}
-		}
+    } else if (value->IsObject()) {
+        if (value->IsArray()) {
+            Local<Array> array = Array::Cast(*value);
+            len = array->Length();
+            PyObject* py_list = PyList_New(len);
+            for (int i = 0; i < len; ++i) {
+                Local<Value> js_val = array->Get(i);
+                PyObject* pyobj = ConvertToPython(js_val);
+                PyList_SET_ITEM(py_list, i, pyobj);
+            }
+            return py_list;
+        } else {
+            Local<Object> obj = value->ToObject();
+            if(!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
+                PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(value->ToObject());
+                PyObject* pyobj = python_object->InstanceGetPyObject();
+                return pyobj;
+            } else {
+                Local<Array> property_names = obj->GetPropertyNames();
+                len = property_names->Length();
+                PyObject* py_dict = PyDict_New();
+
+                for (int i = 0; i < len; ++i) {
+                    Local<String> str = property_names->Get(i)->ToString();
+                    Local<Value> js_val = obj->Get(str);
+                    PyDict_SetItemString(py_dict, *String::Utf8Value(str), ConvertToPython(js_val));
+                }
+                return py_dict;
+            }
+        }
         return NULL;
-    } else if(value->IsArray()) {
-		Local<Array> array = Array::Cast(*value);
-		len = array->Length();
-		PyObject* py_list = PyList_New(len);
-		for(int i = 0; i < len; ++i) {
-			Local<Value> js_val = array->Get(i);
-			PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
-		}
-		return py_list;
-    } else if(value->IsUndefined()) {
+    } else if (value->IsArray()) {
+        Local<Array> array = Array::Cast(*value);
+        len = array->Length();
+        PyObject* py_list = PyList_New(len);
+        for (int i = 0; i < len; ++i) {
+            Local<Value> js_val = array->Get(i);
+            PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
+        }
+        return py_list;
+    } else if (value->IsUndefined()) {
         Py_RETURN_NONE;
     }
+
     return NULL;
 }
 
@@ -280,7 +303,7 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
     int len = args.Length();
     PyObject* args_tuple = PyTuple_New(len);
 
-    for(int i = 0; i < len; ++i) {
+    for (int i = 0; i < len; ++i) {
         PyObject* py_arg = ConvertToPython(args[i]);
         if (PyErr_Occurred()) {
             return ThrowPythonException();
@@ -294,7 +317,7 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
 
     Py_XDECREF(args_tuple);
 
-    if(result) {
+    if (result) {
         return scope.Close(PyObjectWrapper::New(result));
     } else {
         return ThrowPythonException();

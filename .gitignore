@@ -4,3 +4,4 @@ node_modules
 .cproject
 .project
 .settings
+npm-debug.log

@@ -30,7 +30,7 @@ function pythonFinalized () {
 module.exports.eval = function (string) {
   if (pythonFinalized()) throw new PythonError('node-python\'s python interpreter has already been finalized. python code cannot be executed.');
   return binding.eval(string);
-}
+};
 
 module.exports.finalize = function () {
   if ( ! pythonFinalized()) {
@@ -39,7 +39,7 @@ module.exports.finalize = function () {
     return finalized;
   }
   return false;
-}
+};
 
 var _import = module.exports.import = function (string) {
   if (pythonFinalized()) throw new PythonError('node-python\'s python interpreter has already been finalized. python code cannot be executed.');
@@ -49,13 +49,13 @@ var _import = module.exports.import = function (string) {
   try {
     result = binding.import(string);
   } catch (e) {
-    e = new PythonError(e);
-    debug(e);
-    throw e;
+    var err = new PythonError(e);
+    debug(err);
+    throw err;
   }
 
   return result;
-}
+};
 
 var os = _import('os');
 

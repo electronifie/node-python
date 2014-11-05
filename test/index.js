@@ -25,9 +25,9 @@ describe('node-python', function () {
       }).throw(/No module named jibberish/);
     });
     it('should throw an Error when importing a module that includes bad syntax', function () {
-    should(function () {
-        python.import('test');
-    }).throw(/Python Error: SyntaxError/)
+      should(function () {
+          python.import('test');
+      }).throw(/Python Error: SyntaxError/);
     });
   });
   it('should convert javascript null to python NoneType', function () {
@@ -52,7 +52,7 @@ describe('node-python', function () {
   });
   it('should convert javascript numbers to python floats', function () {
     test = python.import('test2');
-    var type = test.getPythonTypeName(1);
+    var type = test.getPythonTypeName(1.1);
     type.should.equal('float');
   });
   it('should convert javascript arrays to python list', function () {
@@ -89,7 +89,7 @@ describe('node-python', function () {
     type.should.equal('list');
     var i = 0, arr = [];
     while (i < 10000) {
-      arr.push(Math.random().toString())
+      arr.push(Math.random().toString());
       i++;
     }
     var type = test.getPythonTypeName(arr);
@@ -104,7 +104,7 @@ describe('node-python', function () {
   });
   it('should convert python lists to javascript arrays', function () {
     test = python.import('test2');
-    var value = test.getPythonValue([ 1, 2, 3]);
+    var value = test.getPythonValue([ '1', '2', '3']);
     value.should.containEql(1);
     value.should.containEql(2);
     value.should.containEql(3);
