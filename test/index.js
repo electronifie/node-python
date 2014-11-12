@@ -109,6 +109,27 @@ describe('node-python', function () {
     value.should.containEql(2);
     value.should.containEql(3);
   });
+  it('should convert python strings to javascript strings', function () {
+    test = python.import('test2');
+    var value = test.getPythonValue('str');
+    value.should.equal('str');
+  });
+  it('should convert python boolean to javascript booleans', function () {
+    test = python.import('test2');
+    var value = test.getPythonValue(true);
+    value.should.equal(true);
+  });
+  it('should convert python numbers to javascript numbers', function () {
+    test = python.import('test2');
+    var value = test.getPythonValue(1);
+    value.should.equal(1);
+  });
+  it('should convert python dates to javascript dates', function () {
+    test = python.import('test2');
+    var date = new Date();
+    var value = test.getPythonValue(date);
+    value.should.eql(date);
+  });
   it('should convert basic python dict to javascript object', function () {
     test = python.import('test3');
     var obj = test.getPythonDict();

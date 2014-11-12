@@ -1,7 +1,9 @@
 #include <node.h>
+#include <Python.h>
 #include "py_object_wrapper.h"
 #include "utils.h"
 #include "datetime.h"
+#include "time.h"
 
 Persistent<FunctionTemplate> PyObjectWrapper::py_function_template;
 
@@ -187,12 +189,41 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         }
         Py_XDECREF(obj);
     }
+    // bool
     else if(PyBool_Check(obj)) {
         int b = PyObject_IsTrue(obj);
         if(b != -1) {
             jsVal = Local<Value>::New(Boolean::New(b));
         }
         Py_XDECREF(obj);
+    }
+    // date
+    else if (PyDateTime_Check(obj)) {
+
+        struct tm tmp;
+
+        int year = PyDateTime_GET_YEAR(obj);
+        int month = PyDateTime_GET_MONTH(obj);
+        int day = PyDateTime_GET_DAY(obj);
+
+        tmp.tm_year = year - 1900;
+        tmp.tm_mon = month - 1;
+        
+        if ((day == 28) && (month == 2) && (year % 4 == 0) && (year % 100 == 0 && year % 400 != 0)) {
+            tmp.tm_mday = 29;    
+        } else {
+            tmp.tm_mday = day;
+        }
+        
+        tmp.tm_hour = PyDateTime_DATE_GET_HOUR(obj) + 1;
+        tmp.tm_min = PyDateTime_DATE_GET_MINUTE(obj);
+        tmp.tm_sec = PyDateTime_DATE_GET_SECOND(obj);
+
+        int milliseconds = PyDateTime_DATE_GET_MICROSECOND(obj) / 1000;
+
+        time_t result = mktime(&tmp) * 1000 + milliseconds;
+
+        jsVal = v8::Date::New(result);
     }
     // dict
     else if(PyDict_CheckExact(obj)) {
