@@ -29,38 +29,35 @@ You should now go have fun with that and make it brokes :)
 
 ## Current status
 
-What should work:
+What works:
 
-* Conversion between None and Undefined
-* Conversion between Python's and Node's Boolean
-* Conversion between Python's and Node's String
-* Calling python functions from node
-* Conversion from Python's Array to Node's Array
+(per unit tests)
 
-What may be broken:
+  node-python
+    ✓ should convert javascript null to python NoneType
+    ✓ should convert javascript undefined to python NoneType
+    ✓ should convert javascript booleans to python booleans
+    ✓ should convert javascript date to python date
+    ✓ should convert javascript numbers to python floats
+    ✓ should convert javascript arrays to python list
+    ✓ should convert javascript objects to python dictionaries
+    ✓ should convert javascript nested objects correctly
+    ✓ should convert python dicts to javascript objects
+    ✓ should convert python lists to javascript arrays
+    ✓ should convert python strings to javascript strings
+    ✓ should convert python boolean to javascript booleans
+    ✓ should convert python numbers to javascript numbers
+    ✓ should convert python dates to javascript dates
+    ✓ should convert basic python dict to javascript object
+    ✓ should convert basic python list to javascript array
+    eval
+      ✓ should return resulting value from python statement executed
+      ✓ should return resulting value from python statement executed, converting to string with complex types
+    import
+      ✓ should return object representing module imported, containing functions from imported module
+      ✓ should throw a PythonError when importing a module that does not exist
+      ✓ should throw an Error when importing a module that includes bad syntax
 
-* Losing precision from Python's 64 bits Integer to Node's Number
-* If you're using node v0.6.x (please upgrade) you'll have to manually compile with node-gyp
+What to watch out for:
 
-What's to be done:
-
-* Conversion from Node's Array to Python's Array
-* Pass javascript object to python
-* Call javascript function from python
-
-What would be realy awesome:
-
-* Proper object introspection
-
-
-## History
-
-* **v0.0.4** : 2013-10-09
-  - use the bindings module to load the native extension
-* **v0.0.3** : 2013-07-06
-  - Refactor
-  - Better type conversion & error handling
-  - Compilation now properly working on both OSX and Linux. Windows compilation _may_ work too
-* **v0.0.2** : 2012-12-21
-  - Forked from [chrisdickinson/node-python](https://github.com/chrisdickinson/node-python)
-  - Compilation with node-gyp
+* Losing precision from Python's 64 bits Integer to Node's Number (we hande this by converting decimals to string and using bignumber.js to consume them. better solutions to come)
