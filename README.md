@@ -1,8 +1,6 @@
 # node-python binding 
 
-python bridge for nodejs!
-
-Hyper-beta, don't hesitate to try and report bugs!
+Python bridge for nodejs! Call you python code from node!
 
 [![Build Status](https://travis-ci.org/JeanSebTr/node-python.png)](https://travis-ci.org/JeanSebTr/node-python)
 
