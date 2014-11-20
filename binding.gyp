@@ -19,12 +19,13 @@
             }
         }, { # not OSX
           "cflags": [
-            "<!(python-config --cflags)"
+            "<!(python-config --cflags)",
+             "-fexceptions", 
+             "-std=c++11"
           ],
-          'cflags': [ '-fexceptions', '-std=c++11' ],
-          'cflags!': ['-fno-exceptions'],
-          'cflags_cc': [ '-fexceptions' ],
-          'cflags_cc!': [ '-fno-exceptions' ],
+          "cflags!": ["-fno-exceptions"],
+          "cflags_cc": [ "-fexceptions" ],
+          "cflags_cc!": [ "-fno-exceptions" ],
           "libraries": [
             "<!(python-config --libs)"
           ]
