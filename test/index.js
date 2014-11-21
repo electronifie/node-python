@@ -104,10 +104,10 @@ describe('node-python', function () {
   });
   it('should convert python lists to javascript arrays', function () {
     test = python.import('test2');
-    var value = test.getPythonValue([ '1', '2', '3']);
+    var value = test.getPythonValue([ 1, 2, '3']);
     value.should.containEql(1);
     value.should.containEql(2);
-    value.should.containEql(3);
+    value.should.containEql('3');
   });
   it('should convert python strings to javascript strings', function () {
     test = python.import('test2');
@@ -127,6 +127,7 @@ describe('node-python', function () {
   it('should convert python dates to javascript dates', function () {
     test = python.import('test2');
     var date = new Date();
+    console.log('js: ', date.getTime());
     var value = test.getPythonValue(date);
     value.should.eql(date);
   });
