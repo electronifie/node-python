@@ -8,27 +8,27 @@
         "src/py_object_wrapper.cc"
       ],
       "conditions": [
-        ['OS=="mac"', {
-            "xcode_settings": {
-              "OTHER_CFLAGS": [
-                "<!(python-config --cflags)"
-              ],
-              "OTHER_LDFLAGS": [
-                "<!(python-config --ldflags)"
-              ]
-            }
-        }, { # not OSX
+	[ 'OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
           "cflags": [
             "<!(python-config --cflags)",
-             "-fexceptions", 
-             "-std=c++11"
+             "-std=c++11",
+             "-Xlinker -export-dynamic"
           ],
-          "cflags!": ["-fno-exceptions"],
-          "cflags_cc": [ "-fexceptions" ],
+          "cflags!": [ "-fno-exceptions" ],
           "cflags_cc!": [ "-fno-exceptions" ],
           "libraries": [
             "<!(python-config --libs)"
           ]
+        }],
+        ['OS=="mac"', {
+          "xcode_settings": {
+            "OTHER_CFLAGS": [
+              "<!(python-config --cflags)"
+            ],
+            "OTHER_LDFLAGS": [
+              "<!(python-config --ldflags)"
+            ]
+          }
         }]
       ]
     }

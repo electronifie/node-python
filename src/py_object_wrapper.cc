@@ -173,7 +173,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         try{
             d = PyLong_AsDouble(obj);
         }
-        catch (OverflowError error) {
+        catch (int e) {
 
         }
         jsVal = Local<Value>::New(Number::New(d));
@@ -216,6 +216,9 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         }
         
         tmp.tm_hour = PyDateTime_DATE_GET_HOUR(obj) + 1;
+
+        printf(" c:%d \n", tmp.tm_hour);
+
         tmp.tm_min = PyDateTime_DATE_GET_MINUTE(obj);
         tmp.tm_sec = PyDateTime_DATE_GET_SECOND(obj);
 
@@ -283,6 +286,7 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
         return PyFloat_FromDouble(value->NumberValue());
     } else if (value->IsDate()) {
         Handle<Date> date = Handle<Date>::Cast(value);
+        printf(" v8:timestamp: %f \n", date->NumberValue());
         PyObject* floatObj = PyFloat_FromDouble(date->NumberValue() / 1000.0 ); // javascript returns milliseconds since epoch. python wants seconds since epoch
         PyObject* timeTuple = Py_BuildValue("(O)", floatObj);
         Py_DECREF(floatObj);
