@@ -1,3 +1,4 @@
+LD_PRELOAD=/usr/lib64/libpython2.7.so
 DEBUG=node-python*
 LD_PRELOAD=/usr/lib64/libpython2.7.so
 PYTHONPATH=./test/support

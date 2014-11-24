@@ -8,7 +8,7 @@
         "src/py_object_wrapper.cc"
       ],
       "conditions": [
-        [ 'OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
+	      [ 'OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
           "cflags": [
             "<!(python-config --cflags)",
              "-std=c++11",

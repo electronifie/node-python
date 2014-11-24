@@ -216,12 +216,11 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         }
         
         tmp.tm_hour = PyDateTime_DATE_GET_HOUR(obj) + 1;
+
         tmp.tm_min = PyDateTime_DATE_GET_MINUTE(obj);
         tmp.tm_sec = PyDateTime_DATE_GET_SECOND(obj);
 
-        int milliseconds = PyDateTime_DATE_GET_MICROSECOND(obj) / 1000;
-
-        time_t result = mktime(&tmp) * 1000 + milliseconds;
+        time_t result = mktime(&tmp) * 1000 + PyDateTime_DATE_GET_MICROSECOND(obj);
 
         jsVal = v8::Date::New(result);
     }
@@ -282,17 +281,12 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     } else if (value->IsNumber()) {
         return PyFloat_FromDouble(value->NumberValue());
     } else if (value->IsDate()) {
-        Handle<Date> date = Handle<Date>::Cast(value);
-        Local<Function> getTime = Local<Function>::Cast(date->Get(String::New("getTime")));
-        Local<Value> result = getTime->Call(date, 0, NULL); 
-        printf(" getTime: %f \n ", result->NumberValue());
-        printf(" date->NumberValue: %f \n ", (double) date->NumberValue());
-        printf(" date->NumberValue: %s \n ", *String::Utf8Value(date->ToString()));
-        PyObject* floatObj = PyFloat_FromDouble(date->NumberValue() / 1000 ); // javascript returns milliseconds since epoch. python wants seconds since epoch
-        PyObject* timeTuple = Py_BuildValue("(O)", floatObj);
-        PyObject* dateTime = PyDateTime_FromTimestamp(timeTuple);
-        Py_DECREF(floatObj);
-        Py_DECREF(timeTuple);
+        Handle<Date> dt = Handle<Date>::Cast(value);
+	    long sinceEpoch = dt->NumberValue();
+    	long time = sinceEpoch / 1000;
+    	time_t timestamp = static_cast<time_t>(time);
+    	struct tm* tmp = localtime(&timestamp);	
+	    PyObject* dateTime = PyDateTime_FromDateAndTime(tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec, sinceEpoch % 1000);
         return dateTime;
     } else if (value->IsObject()) {
         if (value->IsArray()) {
