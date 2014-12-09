@@ -61,6 +61,7 @@ Handle<Value> PyObjectWrapper::Get(Local<String> key, const AccessorInfo& info) 
     String::Utf8Value utf8_key(key);
     string value(*utf8_key);
     PyObject* result = wrapper->InstanceGet(value);
+
     if(result) {
         return PyObjectWrapper::New(result);
     }
@@ -230,6 +231,8 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
             array->Set(i, jsValue);
         }
         jsVal = array;
+    } else {
+        //printf("%s\n", PyString_AsString(PyObject_Repr(obj)));
     }
 
     if(jsVal.IsEmpty()) {
@@ -352,5 +355,6 @@ PyObject* PyObjectWrapper::InstanceGet(const string& key) {
         PyObject* attribute = PyObject_GetAttrString(mPyObject, key.c_str());
         return attribute;
     } 
+
     return (PyObject*)NULL;
 }
