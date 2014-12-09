@@ -137,10 +137,33 @@ describe('node-python', function () {
     obj.should.have.property('two', '2');
     obj.should.have.property('three', 3);
   });
+  it('should convert nested python dict to javascript object', function () {
+    
+    test = python.import('test3');
+
+    for(var i = 0; i < 10000; i++) {
+      
+      var obj = test.getPythonNestedDict();
+      obj.should.have.property('one');
+      obj.one.should.have.property('four', 4);
+      obj.one.should.have.property('five', 5);
+      obj.should.have.property('two', '2');
+      obj.should.have.property('three', 3);
+
+    }
+
+  });
   it('should convert basic python list to javascript array', function () {
     test = python.import('test3');
     var obj = test.getPythonList();
     obj.should.have.containEql(1);
+    obj.should.have.containEql('2');
+    obj.should.have.containEql('three');
+  });
+  it('should convert nested python list to javascript array', function () {
+    test = python.import('test3');
+    var obj = test.getPythonNestedList();
+    obj.should.have.containEql([4, 5, 6]);
     obj.should.have.containEql('2');
     obj.should.have.containEql('three');
   });

@@ -39,6 +39,7 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
 
     try {
         jsObj = ConvertToJavaScript(obj);
+        Py_XDECREF(obj);
     } catch (int e) {
         if (PyErr_Occurred()) {
             return ThrowPythonException();
@@ -153,53 +154,33 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
     // undefined
     if(obj == Py_None) {
         jsVal = Local<Value>::New(Undefined());
-        Py_XDECREF(obj);
     }
     // integer (can be 64b)
     else if(PyInt_CheckExact(obj)) {
         long i = PyInt_AsLong(obj);
         jsVal = Local<Value>::New(Number::New((double) i));
-        Py_XDECREF(obj);
     }
     // double
     else if(PyFloat_CheckExact(obj)) {
         double d = PyFloat_AsDouble(obj);
         jsVal = Local<Value>::New(Number::New(d));
-        Py_XDECREF(obj);
     }
     // long
     else if(PyLong_CheckExact(obj)) {
-        double d;
-        try{
-            d = PyLong_AsDouble(obj);
-        }
-        catch (int e) {
-
-        }
+        double d = PyLong_AsDouble(obj);
         jsVal = Local<Value>::New(Number::New(d));
-        Py_XDECREF(obj);
     }
     // string
     else if(PyString_CheckExact(obj)) {
-        // ref to internal representation: no need to dealloc
-        char *str = PyString_AsString(obj);
-        if (str) {
-            jsVal = Local<Value>::New(String::New(str));
-        } else {
-        }
-        Py_XDECREF(obj);
+        jsVal = Local<Value>::New(String::New(PyString_AsString(obj)));
     }
     // bool
     else if(PyBool_Check(obj)) {
         int b = PyObject_IsTrue(obj);
-        if(b != -1) {
-            jsVal = Local<Value>::New(Boolean::New(b));
-        }
-        Py_XDECREF(obj);
+        jsVal = Local<Value>::New(Boolean::New(b));
     }
     // date
     else if (PyDateTime_Check(obj)) {
-
         struct tm tmp;
 
         int year = PyDateTime_GET_YEAR(obj);
@@ -216,7 +197,6 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         }
         
         tmp.tm_hour = PyDateTime_DATE_GET_HOUR(obj) + 1;
-
         tmp.tm_min = PyDateTime_DATE_GET_MINUTE(obj);
         tmp.tm_sec = PyDateTime_DATE_GET_SECOND(obj);
 
@@ -229,16 +209,14 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         Local<Object> dict = v8::Object::New();
         PyObject *key, *value;
         Py_ssize_t pos = 0;
+
         while (PyDict_Next(obj, &pos, &key, &value)) {
-            Handle<Value> jsKey = ConvertToJavaScript(key);
+            Handle<Value> jsKey = Local<Value>::New(String::New(PyString_AsString(key)));
             Handle<Value> jsValue = ConvertToJavaScript(value);
-            dict->Set(jsKey, jsValue);    
+
+            dict->Set(jsKey, jsValue);
         }
         jsVal = dict;
-        // TODO: figure out correct way to DECREF a dict
-        // Py_XDECREF(key);
-        // Py_XDECREF(value);
-        // Py_XDECREF(obj);
     }
     // list
     else if(PyList_CheckExact(obj)) {
@@ -252,10 +230,10 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
             array->Set(i, jsValue);
         }
         jsVal = array;
-        Py_XDECREF(obj);
     }
-    
+
     if(jsVal.IsEmpty()) {
+        Py_XINCREF(obj);
         Local<Object> jsObj = py_function_template->GetFunction()->NewInstance();
         PyObjectWrapper* wrapper = new PyObjectWrapper(obj);
         wrapper->Wrap(jsObj);

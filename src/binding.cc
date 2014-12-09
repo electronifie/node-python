@@ -3,6 +3,7 @@
 #include <datetime.h>
 #include "py_object_wrapper.h"
 #include "utils.h"
+#include <iostream>
 
 using namespace v8;
 using namespace node;
