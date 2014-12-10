@@ -143,7 +143,7 @@ describe('node-python', function () {
 
     var dict = test.getPythonNestedDict;
 
-    for(var i = 0; i < 100000; i++) {
+    for(var i = 0; i < 10000; i++) {
       var obj = dict();
       obj.should.have.property('one');
       obj.one.should.have.property('four', 4);
