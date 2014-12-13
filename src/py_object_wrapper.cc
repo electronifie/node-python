@@ -39,7 +39,6 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
 
     try {
         jsObj = ConvertToJavaScript(obj);
-        Py_XDECREF(obj);
     } catch (int e) {
         if (PyErr_Occurred()) {
             return ThrowPythonException();
@@ -54,16 +53,13 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
 }
 
 Handle<Value> PyObjectWrapper::Get(Local<String> key, const AccessorInfo& info) {
-    // returning an empty Handle<Value> object signals V8 that we didn't
-    // find the property here, and we should check the "NamedAccessor" functions
     HandleScope scope;
     PyObjectWrapper* wrapper = ObjectWrap::Unwrap<PyObjectWrapper>(info.Holder());
     String::Utf8Value utf8_key(key);
     string value(*utf8_key);
     PyObject* result = wrapper->InstanceGet(value);
-
     if(result) {
-        return PyObjectWrapper::New(result);
+        return scope.Close(PyObjectWrapper::New(result));
     }
     return Handle<Value>();
 }
@@ -134,14 +130,9 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
         for(int i = 0; i < len; ++i) {
             PyObject *key = PySequence_GetItem(keys, i);
             PyObject *value = PySequence_GetItem(values, i);
-            PyObject *key_as_string = PyObject_Str(key);
-            char* cstr = PyString_AsString(key_as_string);
-
             Local<Object> jsobj = PyObjectWrapper::py_function_template->GetFunction()->NewInstance();
             PyObjectWrapper* obj_out = new PyObjectWrapper(value);
             obj_out->Wrap(jsobj);
-            Py_XDECREF(key);
-            Py_XDECREF(key_as_string);
         }
         Py_XDECREF(keys);
         Py_XDECREF(values);
@@ -212,7 +203,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         Py_ssize_t pos = 0;
 
         while (PyDict_Next(obj, &pos, &key, &value)) {
-            Handle<Value> jsKey = Local<Value>::New(String::New(PyString_AsString(key)));
+            Handle<Value> jsKey = ConvertToJavaScript(key);
             Handle<Value> jsValue = ConvertToJavaScript(value);
 
             dict->Set(jsKey, jsValue);
@@ -226,16 +217,10 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         PyObject* value;
         for(int i = 0; i < size; i++ ){
             value = PyList_GetItem(obj, i);
-            char *format;
-            Handle<Value> jsValue = ConvertToJavaScript(value);
-            array->Set(i, jsValue);
+            array->Set(i, ConvertToJavaScript(value));
         }
         jsVal = array;
     } else {
-        //printf("%s\n", PyString_AsString(PyObject_Repr(obj)));
-    }
-
-    if(jsVal.IsEmpty()) {
         Py_XINCREF(obj);
         Local<Object> jsObj = py_function_template->GetFunction()->NewInstance();
         PyObjectWrapper* wrapper = new PyObjectWrapper(obj);
@@ -249,8 +234,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
 PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     int len;
     if (value->IsString()) {
-        PyObject* str = PyString_FromString(*String::Utf8Value(value->ToString()));
-        return str;
+        return PyString_FromString(*String::Utf8Value(value->ToString()));
     } else if (value->IsBoolean()) {
         if (value->ToBoolean()->IsTrue()) {
             return Py_True;
@@ -267,8 +251,7 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     	long time = sinceEpoch / 1000;
     	time_t timestamp = static_cast<time_t>(time);
     	struct tm* tmp = localtime(&timestamp);	
-	    PyObject* dateTime = PyDateTime_FromDateAndTime(tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec, sinceEpoch % 1000);
-        return dateTime;
+        return PyDateTime_FromDateAndTime(tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec, sinceEpoch % 1000);;
     } else if (value->IsObject()) {
         if (value->IsArray()) {
             Local<Array> array = Array::Cast(*value);
@@ -276,12 +259,12 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
             PyObject* py_list = PyList_New(len);
             for (int i = 0; i < len; ++i) {
                 Local<Value> js_val = array->Get(i);
-                PyObject* pyobj = ConvertToPython(js_val);
-                PyList_SET_ITEM(py_list, i, pyobj);
+                PyList_SET_ITEM(py_list, i, ConvertToPython(js_val));
             }
             return py_list;
         } else {
             Local<Object> obj = value->ToObject();
+
             if(!obj->FindInstanceInPrototypeChain(PyObjectWrapper::py_function_template).IsEmpty()) {
                 PyObjectWrapper* python_object = ObjectWrap::Unwrap<PyObjectWrapper>(value->ToObject());
                 PyObject* pyobj = python_object->InstanceGetPyObject();
@@ -319,25 +302,24 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
 Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
     // for now, we don't do anything.
     HandleScope scope;
+    
     int len = args.Length();
     PyObject* args_tuple = PyTuple_New(len);
-
     for (int i = 0; i < len; ++i) {
-        PyObject* py_arg = ConvertToPython(args[i]);
-        if (PyErr_Occurred()) {
-            return ThrowPythonException();
-        }
-        PyTuple_SET_ITEM(args_tuple, i, py_arg);
+        PyTuple_SET_ITEM(args_tuple, i, ConvertToPython(args[i]));
     }
+
     PyObject* result = PyObject_CallObject(mPyObject, args_tuple);
+    //Py_XDECREF(args_tuple);
+    
     if (PyErr_Occurred()) {
         return ThrowPythonException();
     }
 
-    Py_XDECREF(args_tuple);
-
     if (result) {
-        return scope.Close(PyObjectWrapper::New(result));
+        Handle<Value> val = PyObjectWrapper::New(result);
+        Py_XDECREF(result);
+        return scope.Close(val);
     } else {
         return ThrowPythonException();
     }
@@ -345,16 +327,12 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
 
 string PyObjectWrapper::InstanceToString(const Arguments& args) {
     PyObject* as_string = PyObject_Str(mPyObject);
-    string native_string(PyString_AsString(as_string));
-    Py_XDECREF(as_string);
-    return native_string;
+    return PyString_AsString(as_string);
 }
 
 PyObject* PyObjectWrapper::InstanceGet(const string& key) {
     if(PyObject_HasAttrString(mPyObject, key.c_str())) {
-        PyObject* attribute = PyObject_GetAttrString(mPyObject, key.c_str());
-        return attribute;
-    } 
-
+        return PyObject_GetAttrString(mPyObject, key.c_str());
+    }
     return (PyObject*)NULL;
 }

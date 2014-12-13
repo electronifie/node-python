@@ -1,6 +1,6 @@
 {
   "name": "node-python",
-  "version": "v0.0.5-rc14",
+  "version": "v0.0.5-rc15",
   "description": "Call python stuff from nodejs",
   "main": "index.js",
   "repository": {

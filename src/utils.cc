@@ -8,12 +8,14 @@ Handle<Value> ThrowPythonException() {
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch(&ptype, &pvalue, &ptraceback);
     PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
+    
     // maybe useless to protect against bad use of ThrowPythonException ?
     if(pvalue == NULL) {
         return ThrowException(
             Exception::Error(String::New("No exception found"))
         );
     }
+
     // handle exception message
     Local<v8::String> msg = String::New("Python Error: ");
 
@@ -33,8 +35,8 @@ Handle<Value> ThrowPythonException() {
         PyObject *module_name, *pyth_module, *pyth_func;
         module_name = PyString_FromString("traceback");
         pyth_module = PyImport_Import(module_name);
-        
         Py_DECREF(module_name);
+
         pyth_func = PyObject_GetAttrString(pyth_module, "format_exception");
         Py_DECREF(pyth_module);
         
