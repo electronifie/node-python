@@ -180,7 +180,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         int day = PyDateTime_GET_DAY(obj);
 
         tmp.tm_year = year - 1900;
-        tmp.tm_mon = month - 1;
+        tmp.tm_mon = month;
         
         if ((day == 28) && (month == 2) && (year % 4 == 0) && (year % 100 == 0 && year % 400 != 0)) {
             tmp.tm_mday = 29;    
