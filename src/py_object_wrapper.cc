@@ -172,27 +172,45 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         jsVal = Local<Value>::New(Boolean::New(b));
     }
     // date
-    else if (PyDateTime_Check(obj)) {
-        struct tm tmp;
+    else if (PyDate_Check(obj)) {
+        time_t rawtime;
+        struct tm * timeinfo;
 
+        time ( &rawtime );
+        timeinfo = localtime ( &rawtime );
         int year = PyDateTime_GET_YEAR(obj);
         int month = PyDateTime_GET_MONTH(obj);
         int day = PyDateTime_GET_DAY(obj);
 
-        tmp.tm_year = year - 1900;
-        tmp.tm_mon = month;
-        
         if ((day == 28) && (month == 2) && (year % 4 == 0) && (year % 100 == 0 && year % 400 != 0)) {
-            tmp.tm_mday = 29;    
-        } else {
-            tmp.tm_mday = day;
+            timeinfo->tm_mday = 29;    
         }
-        
-        tmp.tm_hour = PyDateTime_DATE_GET_HOUR(obj) + 1;
-        tmp.tm_min = PyDateTime_DATE_GET_MINUTE(obj);
-        tmp.tm_sec = PyDateTime_DATE_GET_SECOND(obj);
 
-        time_t result = mktime(&tmp) * 1000 + PyDateTime_DATE_GET_MICROSECOND(obj);
+        timeinfo->tm_year = year - 1900;
+        timeinfo->tm_mon = month - 1;
+        timeinfo->tm_mday = day;
+
+        int microseconds = 0;
+        if ( PyDateTime_Check(obj) ) {
+            timeinfo->tm_hour = PyDateTime_DATE_GET_HOUR(obj);
+            timeinfo->tm_min = PyDateTime_DATE_GET_MINUTE(obj);
+            timeinfo->tm_sec = PyDateTime_DATE_GET_SECOND(obj);
+            timeinfo->tm_isdst = -1;
+            microseconds = PyDateTime_DATE_GET_MICROSECOND(obj);
+        } else if (PyTime_Check(obj) ) {
+            timeinfo->tm_hour = PyDateTime_TIME_GET_HOUR(obj);
+            timeinfo->tm_min = PyDateTime_TIME_GET_MINUTE(obj);
+            timeinfo->tm_sec = PyDateTime_TIME_GET_SECOND(obj);
+            timeinfo->tm_isdst = -1;
+            microseconds = PyDateTime_TIME_GET_MICROSECOND(obj);
+        } else {
+            timeinfo->tm_hour = 0;
+            timeinfo->tm_min = 0;
+            timeinfo->tm_sec = 0;
+            timeinfo->tm_isdst = -1;
+        }
+
+        time_t result = mktime(timeinfo) * 1000 + microseconds;
 
         jsVal = v8::Date::New(result);
     }
@@ -248,10 +266,20 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     } else if (value->IsDate()) {
         Handle<Date> dt = Handle<Date>::Cast(value);
 	    long sinceEpoch = dt->NumberValue();
-    	long time = sinceEpoch / 1000;
-    	time_t timestamp = static_cast<time_t>(time);
+        long milliseconds = (sinceEpoch / 1000);
+    	time_t timestamp = (time_t)(milliseconds);
+
     	struct tm* tmp = localtime(&timestamp);	
-        return PyDateTime_FromDateAndTime(tmp->tm_year + 1900, tmp->tm_mon, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec, sinceEpoch % 1000);;
+        
+        return PyDateTime_FromDateAndTime(
+            tmp->tm_year + 1900, 
+            tmp->tm_mon + 1, 
+            tmp->tm_mday, 
+            tmp->tm_hour, 
+            tmp->tm_min, 
+            tmp->tm_sec, 
+            sinceEpoch % 1000
+        );
     } else if (value->IsObject()) {
         if (value->IsArray()) {
             Local<Array> array = Array::Cast(*value);

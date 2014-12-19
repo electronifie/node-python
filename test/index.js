@@ -130,6 +130,12 @@ describe('node-python', function () {
     var value = test.getPythonValue(date);
     value.should.eql(date);
   });
+  it('should convert summer dates from python to javascript', function () {
+    test = python.import('test2');
+    var date = new Date('06-01-2014');
+    var value = test.getPythonValue(date);
+    value.should.eql(date);
+  });
   it('should convert basic python dict to javascript object', function () {
     test = python.import('test3');
     var obj = test.getPythonDict();
