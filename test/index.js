@@ -126,13 +126,15 @@ describe('node-python', function () {
   });
   it('should convert python dates to javascript dates', function () {
     test = python.import('test2');
-    var date = new Date();
+    var date = new Date('2014-12-01');
+    console.log(date);
     var value = test.getPythonValue(date);
     value.should.eql(date);
   });
-  it('should convert summer dates from python to javascript', function () {
+  it('should convert daylight savings dates from python to javascript', function () {
     test = python.import('test2');
-    var date = new Date('06-01-2014');
+    var date = new Date('2014-06-01');
+    console.log(date);
     var value = test.getPythonValue(date);
     value.should.eql(date);
   });

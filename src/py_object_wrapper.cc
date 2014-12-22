@@ -173,11 +173,11 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
     }
     // date
     else if (PyDate_Check(obj)) {
-        time_t rawtime;
-        struct tm * timeinfo;
+        time_t rawtime = 0;
 
-        time ( &rawtime );
-        timeinfo = localtime ( &rawtime );
+        struct tm * timeinfo = { 0 };
+        timeinfo = gmtime ( &rawtime );
+
         int year = PyDateTime_GET_YEAR(obj);
         int month = PyDateTime_GET_MONTH(obj);
         int day = PyDateTime_GET_DAY(obj);
@@ -192,6 +192,11 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
 
         int microseconds = 0;
         if ( PyDateTime_Check(obj) ) {
+            PyObject *utcoffset = PyObject_CallMethod(obj, "utcoffset", NULL);
+            if(utcoffset != Py_None){
+                obj = PyNumber_Subtract(obj, utcoffset);
+            }
+
             timeinfo->tm_hour = PyDateTime_DATE_GET_HOUR(obj);
             timeinfo->tm_min = PyDateTime_DATE_GET_MINUTE(obj);
             timeinfo->tm_sec = PyDateTime_DATE_GET_SECOND(obj);
