@@ -8,26 +8,24 @@ Handle<Value> ThrowPythonException() {
     PyObject *ptype, *pvalue, *ptraceback;
     PyErr_Fetch(&ptype, &pvalue, &ptraceback);
     PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
-    
+
     // maybe useless to protect against bad use of ThrowPythonException ?
     if(pvalue == NULL) {
-        return ThrowException(
-            Exception::Error(String::New("No exception found"))
-        );
+        NanThrowError("No exception found");
     }
 
     // handle exception message
-    Local<v8::String> msg = String::New("Python Error: ");
+    Local<v8::String> msg = NanNew<String>("Python Error: ");
 
     if (ptype != NULL) {
-        msg = v8::String::Concat(msg, v8::String::New(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))));   
-        msg = v8::String::Concat(msg, v8::String::New(": "));
+        msg = v8::String::Concat(msg, NanNew<String>(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))));
+        msg = v8::String::Concat(msg, NanNew<String>(": "));
 
         if (pvalue != NULL) {
-            msg = v8::String::Concat(msg, v8::String::New(PyString_AsString(PyObject_Str(pvalue))));
+            msg = v8::String::Concat(msg, NanNew<String>(PyString_AsString(PyObject_Str(pvalue))));
         }
 
-        msg = v8::String::Concat(msg, v8::String::New("\n"));
+        msg = v8::String::Concat(msg, NanNew<String>("\n"));
     }
 
     if (ptraceback != NULL) {
@@ -39,11 +37,11 @@ Handle<Value> ThrowPythonException() {
 
         pyth_func = PyObject_GetAttrString(pyth_module, "format_exception");
         Py_DECREF(pyth_module);
-        
+
         if (pyth_func) {
             PyObject *pyth_val, *pystr, *ret;
             char *str;
-            
+
             char *full_backtrace;
 
             pyth_val = PyObject_CallFunctionObjArgs(pyth_func, ptype, pvalue, ptraceback, NULL);
@@ -57,11 +55,11 @@ Handle<Value> ThrowPythonException() {
             Py_DECREF(pystr);
             Py_DECREF(str);
 
-            msg = v8::String::Concat(msg, v8::String::New("\n"));
-            msg = v8::String::Concat(msg, v8::String::New(full_backtrace));
+            msg = v8::String::Concat(msg, NanNew<String>("\n"));
+            msg = v8::String::Concat(msg, NanNew<String>(full_backtrace));
         } else {
-            msg = v8::String::Concat(msg, v8::String::New("\n"));
-            msg = v8::String::Concat(msg, v8::String::New(PyString_AsString(PyObject_Str(ptraceback))));
+            msg = v8::String::Concat(msg, NanNew<String>("\n"));
+            msg = v8::String::Concat(msg, NanNew<String>(PyString_AsString(PyObject_Str(ptraceback))));
         }
 
     }
@@ -86,5 +84,5 @@ Handle<Value> ThrowPythonException() {
     Py_XDECREF(pvalue);
     Py_XDECREF(ptraceback);
 
-    return ThrowException(err);
+    NanThrowError(err);
 }

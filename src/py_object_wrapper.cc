@@ -8,11 +8,11 @@
 Persistent<FunctionTemplate> PyObjectWrapper::py_function_template;
 
 void PyObjectWrapper::Initialize() {
-    HandleScope scope;
+    NanScope();
 
     PyDateTime_IMPORT;
 
-    Local<FunctionTemplate> fn_tpl = FunctionTemplate::New();
+    Local<FunctionTemplate> fn_tpl = NanNew<FunctionTemplate>();
     Local<ObjectTemplate> proto = fn_tpl->PrototypeTemplate();
     Local<ObjectTemplate> obj_tpl = fn_tpl->InstanceTemplate();
 
@@ -22,19 +22,19 @@ void PyObjectWrapper::Initialize() {
     obj_tpl->SetNamedPropertyHandler(Get, Set);
 
     // If we're calling `toString`, delegate to our version of ToString
-    proto->SetAccessor(String::NewSymbol("toString"), ToStringAccessor); 
+    proto->SetAccessor(NanNew<String>("toString"), ToStringAccessor);
 
     // likewise for valueOf
-    obj_tpl->SetAccessor(String::NewSymbol("valueOf"), ValueOfAccessor); 
+    obj_tpl->SetAccessor(NanNew<String>("valueOf"), ValueOfAccessor);
 
     // Python objects can be called as functions.
     obj_tpl->SetCallAsFunctionHandler(Call, Handle<Value>());
 
-    py_function_template = Persistent<FunctionTemplate>::New(fn_tpl);
+    py_function_template = NanNew<FunctionTemplate>(fn_tpl);
 }
 
 Handle<Value> PyObjectWrapper::New(PyObject* obj) {
-    HandleScope scope;
+    NanEscapableScope();
     Local<Value> jsObj;
 
     try {
@@ -42,78 +42,78 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
     } catch (int e) {
         if (PyErr_Occurred()) {
             return ThrowPythonException();
-        } 
+        }
     }
 
     if (PyErr_Occurred()) {
         return ThrowPythonException();
-    }  
+    }
 
-    return scope.Close(jsObj);
+    NanEscapeScope(jsObj);
 }
 
-Handle<Value> PyObjectWrapper::Get(Local<String> key, const AccessorInfo& info) {
-    HandleScope scope;
-    PyObjectWrapper* wrapper = ObjectWrap::Unwrap<PyObjectWrapper>(info.Holder());
+NAN_GETTER(Get) {
+    NanEscapableScope();
+    PyObjectWrapper* wrapper = node::ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     String::Utf8Value utf8_key(key);
     string value(*utf8_key);
     PyObject* result = wrapper->InstanceGet(value);
     if(result) {
-        return scope.Close(PyObjectWrapper::New(result));
+        return NanEscapeScope(PyObjectWrapper::New(result));
     }
     return Handle<Value>();
 }
 
-Handle<Value> PyObjectWrapper::Set(Local<String> key, Local<Value> value, const AccessorInfo& info) {
+NAN_SETTER(Set) {
     // we don't know what to do.
-    return Undefined();
+    NanReturnUndefined();
 }
 
-Handle<Value> PyObjectWrapper::CallAccessor(Local<String> property, const AccessorInfo& info) {
-    HandleScope scope;
-    Local<FunctionTemplate> func = FunctionTemplate::New(Call);
-    return scope.Close(func->GetFunction());
+NAN_GETTER(CallAccessor) {
+    NanEscapableScope();
+    Local<FunctionTemplate> func = NanNew<FunctionTemplate>(PyObjectWrapper::Call);
+    NanEscapeScope(func->GetFunction());
 }
 
-Handle<Value> PyObjectWrapper::ToStringAccessor(Local<String> property, const AccessorInfo& info) {
-    HandleScope scope;
-    Local<FunctionTemplate> func = FunctionTemplate::New(ToString);
-    return scope.Close(func->GetFunction());
+NAN_GETTER(ToStringAccessor) {
+    NanEscapableScope();
+    Local<FunctionTemplate> func = NanNew<FunctionTemplate>(PyObjectWrapper::ToString);
+    NanEscapeScope(func->GetFunction());
 }
 
-Handle<Value> PyObjectWrapper::ValueOfAccessor(Local<String> property, const AccessorInfo& info) {
-    HandleScope scope;
-    Local<FunctionTemplate> func = FunctionTemplate::New(ValueOf);
-    return scope.Close(func->GetFunction());
+NAN_GETTER(ValueOfAccessor) {
+    NanEscapableScope();
+    Local<FunctionTemplate> func = NanNew<FunctionTemplate>(PyObjectWrapper::ValueOf);
+    NanEscapeScope(func->GetFunction());
 }
 
-Handle<Value> PyObjectWrapper::Call(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(PyObjectWrapper::Call) {
+    NanEscapableScope();
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     Handle<Value> result = pyobjwrap->InstanceCall(args);
-    return scope.Close(result);
+    NanEscapeScope(result);
 }
 
-Handle<Value> PyObjectWrapper::ToString(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(PyObjectWrapper::ToString) {
+    NanEscapableScope;
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
-    Local<String> result = String::New(pyobjwrap->InstanceToString(args).c_str());
-    return scope.Close(result);
+    Local<String> result = NanNew<String>(pyobjwrap->InstanceToString(args).c_str());
+    NanEscapeScope(result);
 }
 
-Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
-    HandleScope scope;
+NAN_METHOD(PyObjectWrapper::ValueOf) {
+    NanEscapableScope();
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     PyObject* py_obj = pyobjwrap->InstanceGetPyObject();
     if(PyCallable_Check(py_obj)) {
-        Local<FunctionTemplate> call = FunctionTemplate::New(Call);
-        return scope.Close(call->GetFunction());
+        Local<FunctionTemplate> call = NanNew<FunctionTemplate>(Call);
+        NanEscapeScope(call->GetFunction());
     } else if (PyNumber_Check(py_obj)) {
         long long_result = PyLong_AsLong(py_obj);
-        return scope.Close(Integer::New(long_result));
+        NanEscapeScope(NanNew<Integer>(long_result));
     } else if (PySequence_Check(py_obj)) {
         int len = PySequence_Length(py_obj);
-        Local<Array> array = Array::New(len);
+        Local<Array> array = NanNew<Array>(len);
         for(int i = 0; i < len; ++i) {
             Handle<Object> jsobj = PyObjectWrapper::py_function_template->GetFunction()->NewInstance();
             PyObject* py_obj_out = PySequence_GetItem(py_obj, i);
@@ -121,7 +121,7 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
             obj_out->Wrap(jsobj);
             array->Set(i, jsobj);
         }
-        return scope.Close(array);
+        NanEscapeScope(array);
     } else if (PyMapping_Check(py_obj)) {
         int len = PyMapping_Length(py_obj);
         Local<Object> object = Object::New();
@@ -136,9 +136,9 @@ Handle<Value> PyObjectWrapper::ValueOf(const Arguments& args) {
         }
         Py_XDECREF(keys);
         Py_XDECREF(values);
-        return scope.Close(object);
+        NanEscapeScope(object);
     }
-    return Undefined();
+    NanReturnUndefined();
 }
 
 Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
@@ -183,7 +183,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         int day = PyDateTime_GET_DAY(obj);
 
         if ((day == 28) && (month == 2) && (year % 4 == 0) && (year % 100 == 0 && year % 400 != 0)) {
-            timeinfo->tm_mday = 29;    
+            timeinfo->tm_mday = 29;
         }
 
         timeinfo->tm_year = year - 1900;
@@ -250,7 +250,7 @@ Local<Value> PyObjectWrapper::ConvertToJavaScript(PyObject* obj) {
         wrapper->Wrap(jsObj);
         jsVal = Local<Value>::New(jsObj);
     }
-    
+
     return jsVal;
 }
 
@@ -274,15 +274,15 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
         long milliseconds = (sinceEpoch / 1000);
     	time_t timestamp = (time_t)(milliseconds);
 
-    	struct tm* tmp = localtime(&timestamp);	
-        
+    	struct tm* tmp = localtime(&timestamp);
+
         return PyDateTime_FromDateAndTime(
-            tmp->tm_year + 1900, 
-            tmp->tm_mon + 1, 
-            tmp->tm_mday, 
-            tmp->tm_hour, 
-            tmp->tm_min, 
-            tmp->tm_sec, 
+            tmp->tm_year + 1900,
+            tmp->tm_mon + 1,
+            tmp->tm_mday,
+            tmp->tm_hour,
+            tmp->tm_min,
+            tmp->tm_sec,
             sinceEpoch % 1000
         );
     } else if (value->IsObject()) {
@@ -332,10 +332,10 @@ PyObject* PyObjectWrapper::ConvertToPython(const Handle<Value>& value) {
     return NULL;
 }
 
-Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
+NAN_METHOD(PyObjectWrapper::InstanceCall) {
     // for now, we don't do anything.
     HandleScope scope;
-    
+
     int len = args.Length();
     PyObject* args_tuple = PyTuple_New(len);
     for (int i = 0; i < len; ++i) {
@@ -344,7 +344,7 @@ Handle<Value> PyObjectWrapper::InstanceCall(const Arguments& args) {
 
     PyObject* result = PyObject_CallObject(mPyObject, args_tuple);
     //Py_XDECREF(args_tuple);
-    
+
     if (PyErr_Occurred()) {
         return ThrowPythonException();
     }

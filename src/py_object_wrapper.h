@@ -5,6 +5,7 @@
 #include <string>
 
 #include <node.h>
+#include <nan.h>
 #include <Python.h>
 
 #include "utils.h"
@@ -25,34 +26,34 @@ class PyObjectWrapper : public node::ObjectWrap {
         static void Initialize();
 
         static Handle<Value> New(PyObject* obj);
-        static Handle<Value> New(const Arguments& args);
+        static NAN_METHOD(New);
 
-        static Handle<Value> Get(Local<String> key, const AccessorInfo& info);
-        static Handle<Value> Set(Local<String> key, Local<Value> value, const AccessorInfo& info);
+        static NAN_GETTER(Get);
+        static NAN_SETTER(Set);
 
-        static Handle<Value> CallAccessor(Local<String> property, const AccessorInfo& info);
+        static NAN_GETTER(CallAccessor);
 
-        static Handle<Value> ToStringAccessor(Local<String> property, const AccessorInfo& info);
+        static NAN_GETTER(ToStringAccessor);
 
-        static Handle<Value> ValueOfAccessor(Local<String> property, const AccessorInfo& info);
+        static NAN_GETTER(ValueOfAccessor);
 
-        static Handle<Value> Call(const Arguments& args);
+        static NAN_METHOD(Call);
 
-        static Handle<Value> ToString(const Arguments& args);
+        static NAN_METHOD(ToString);
 
-        static Handle<Value> ValueOf(const Arguments& args);
+        static NAN_METHOD(ValueOf);
 
         static PyObject* ConvertToPython(const Handle<Value>& value);
-        
+
         static Local<Value> ConvertToJavaScript(PyObject* obj);
 
         PyObject* InstanceGetPyObject() {
             return mPyObject;
         };
 
-        Handle<Value> InstanceCall(const Arguments& args);
+        NAN_METHOD(InstanceCall);
 
-        string InstanceToString(const Arguments& args);
+        string InstanceToString(_NAN_METHOD_ARGS_TYPE args);
 
         PyObject* InstanceGet(const string& key);
 };

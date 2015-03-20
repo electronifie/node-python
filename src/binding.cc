@@ -9,14 +9,12 @@ using namespace v8;
 using namespace node;
 using std::string;
 
-Handle<Value> eval(const Arguments& args) {
-    HandleScope scope; 
+NAN_METHOD(eval) {
+    NanEscapableScope();
     if (args.Length() < 1 || !args[0]->IsString()) {
-        return ThrowException(
-            Exception::Error(String::New("A string expression must be provided."))
-        );
+        NanThrowError("A string expression must be provided.");
     }
-    
+
     PyCodeObject* code = (PyCodeObject*) Py_CompileString(*String::Utf8Value(args[0]->ToString()), "eval", Py_eval_input);
     PyObject* main_module = PyImport_AddModule("__main__");
     PyObject* global_dict = PyModule_GetDict(main_module);
@@ -29,43 +27,41 @@ Handle<Value> eval(const Arguments& args) {
     Py_XDECREF(local_dict);
     Py_XDECREF(obj);
 
-    return scope.Close(PyObjectWrapper::New(result));
+    NanEscapeScope(PyObjectWrapper::New(result));
 }
 
-Handle<Value> finalize(const Arguments& args) {
-	HandleScope scope;
+NAN_METHOD(finalize) {
+	NanScope();
     Py_Finalize();
-    return scope.Close(Undefined());
+    NanReturnUndefined();
 }
 
-Handle<Value> import(const Arguments& args) {
-    HandleScope scope; 
+NAN_METHOD(import) {
+    NanEscapableScope();
     if (args.Length() < 1 || !args[0]->IsString()) {
-        return ThrowException(
-            Exception::Error(String::New("I don't know how to import that."))
-        );
+        NanThrowError("I don't know how to import that.");
     }
 
     PyObject* module_name;
     PyObject* module;
-    
+
     module_name = PyUnicode_FromString(*String::Utf8Value(args[0]->ToString()));
-    module = PyImport_Import(module_name);    
+    module = PyImport_Import(module_name);
 
     if (PyErr_Occurred()) {
-        return ThrowPythonException();
+        NanReturnValue(ThrowPythonException());
     }
 
     if (!module) {
-        return ThrowPythonException();
+        NanReturnValue(ThrowPythonException());
     }
     Py_XDECREF(module_name);
 
-    return scope.Close(PyObjectWrapper::New(module));
+    NanEscapeScope(PyObjectWrapper::New(module));
 }
 
 void init (Handle<Object> exports) {
-    HandleScope scope;
+    NanScope();
 
     Py_Initialize();
     PyObjectWrapper::Initialize();
@@ -74,27 +70,27 @@ void init (Handle<Object> exports) {
 
     // module.exports.eval
     exports->Set(
-        String::NewSymbol("eval"),
-        FunctionTemplate::New(eval)->GetFunction()
+        NanNew<String>("eval"),
+        NanNew<FunctionTemplate>(eval)->GetFunction()
     );
 
     // module.exports.finalize
     exports->Set(
-        String::NewSymbol("finalize"),
-        FunctionTemplate::New(finalize)->GetFunction()
+        NanNew<String>("finalize"),
+        NanNew<FunctionTemplate>(finalize)->GetFunction()
     );
 
     // module.exports.import
     exports->Set(
-        String::NewSymbol("import"),
-        FunctionTemplate::New(import)->GetFunction()
+        NanNew<String>("import"),
+        NanNew<FunctionTemplate>(import)->GetFunction()
     );
 
     // module.exports.PyObject
-    exports->Set(
-        String::NewSymbol("PyObject"),
-        PyObjectWrapper::py_function_template->GetFunction()
-    );
+    // exports->Set(
+    //     NanNew<String>("PyObject"),
+    //     PyObjectWrapper::py_function_template->GetFunction()
+    // );
 
 }
 
