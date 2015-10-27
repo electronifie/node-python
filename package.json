@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "mocha": "^1.21.3",
+    "mocha-jenkins-reporter": "^0.1.9",
     "should": "^4.0.4",
     "sinon": "^1.10.3"
   }
