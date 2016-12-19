@@ -10,12 +10,12 @@ using namespace node;
 using std::string;
 
 NAN_METHOD(eval) {
-    NanEscapableScope();
-    if (args.Length() < 1 || !args[0]->IsString()) {
-        NanThrowError("A string expression must be provided.");
+    Nan::EscapableHandleScope();
+    if (info.Length() < 1 || !info[0]->IsString()) {
+        Nan::ThrowError("A string expression must be provided.");
     }
 
-    PyCodeObject* code = (PyCodeObject*) Py_CompileString(*String::Utf8Value(args[0]->ToString()), "eval", Py_eval_input);
+    PyCodeObject* code = (PyCodeObject*) Py_CompileString(*String::Utf8Value(info[0]->ToString()), "eval", Py_eval_input);
     PyObject* main_module = PyImport_AddModule("__main__");
     PyObject* global_dict = PyModule_GetDict(main_module);
     PyObject* local_dict = PyDict_New();
@@ -27,41 +27,41 @@ NAN_METHOD(eval) {
     Py_XDECREF(local_dict);
     Py_XDECREF(obj);
 
-    NanEscapeScope(PyObjectWrapper::New(result));
+    PyObjectWrapper::New(result);
 }
 
 NAN_METHOD(finalize) {
-	NanScope();
+	Nan::HandleScope();
     Py_Finalize();
-    NanReturnUndefined();
+    Nan::Undefined();
 }
 
 NAN_METHOD(import) {
-    NanEscapableScope();
-    if (args.Length() < 1 || !args[0]->IsString()) {
-        NanThrowError("I don't know how to import that.");
+    Nan::EscapableHandleScope();
+    if (info.Length() < 1 || !info[0]->IsString()) {
+        Nan::ThrowError("I don't know how to import that.");
     }
 
     PyObject* module_name;
     PyObject* module;
 
-    module_name = PyUnicode_FromString(*String::Utf8Value(args[0]->ToString()));
+    module_name = PyUnicode_FromString(*String::Utf8Value(info[0]->ToString()));
     module = PyImport_Import(module_name);
 
     if (PyErr_Occurred()) {
-        NanReturnValue(ThrowPythonException());
+        Nan::ThrowError(ThrowPythonException());
     }
 
     if (!module) {
-        NanReturnValue(ThrowPythonException());
+        Nan::ThrowError(ThrowPythonException());
     }
     Py_XDECREF(module_name);
 
-    NanEscapeScope(PyObjectWrapper::New(module));
+    PyObjectWrapper::New(module);
 }
 
 void init (Handle<Object> exports) {
-    NanScope();
+    Nan::HandleScope();
 
     Py_Initialize();
     PyObjectWrapper::Initialize();
@@ -69,28 +69,16 @@ void init (Handle<Object> exports) {
     // how to schedule Py_Finalize(); to be called when process exits?
 
     // module.exports.eval
-    exports->Set(
-        NanNew<String>("eval"),
-        NanNew<FunctionTemplate>(eval)->GetFunction()
-    );
+    Nan::Export(exports, "eval", eval);
 
     // module.exports.finalize
-    exports->Set(
-        NanNew<String>("finalize"),
-        NanNew<FunctionTemplate>(finalize)->GetFunction()
-    );
+    Nan::Export(exports, "finalize", finalize);
 
     // module.exports.import
-    exports->Set(
-        NanNew<String>("import"),
-        NanNew<FunctionTemplate>(import)->GetFunction()
-    );
+    Nan::Export(exports, "import", import);
 
     // module.exports.PyObject
-    // exports->Set(
-    //     NanNew<String>("PyObject"),
-    //     PyObjectWrapper::py_function_template->GetFunction()
-    // );
+    // Nan::Export(exports, "PyObject", PyObject);
 
 }
 
