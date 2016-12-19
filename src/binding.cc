@@ -69,28 +69,16 @@ void init (Handle<Object> exports) {
     // how to schedule Py_Finalize(); to be called when process exits?
 
     // module.exports.eval
-    Nan::Set(
-        Nan::New<String>("eval"),
-        Nan::New<FunctionTemplate>(eval)->GetFunction()
-    );
+    Nan::Export(exports, "eval", eval);
 
     // module.exports.finalize
-    Nan::Set(
-        Nan::New<String>("finalize"),
-        Nan::New<FunctionTemplate>(finalize)->GetFunction()
-    );
+    Nan::Export(exports, "finalize", finalize);
 
     // module.exports.import
-    Nan::Set(
-        Nan::New<String>("import"),
-        Nan::New<FunctionTemplate>(import)->GetFunction()
-    );
+    Nan::Export(exports, "import", import);
 
     // module.exports.PyObject
-    // Nan::Set(
-    //     Nan::New<String>("PyObject"),
-    //     PyObjectWrapper::py_function_template->GetFunction()
-    // );
+    // Nan::Export(exports, "PyObject", PyObject);
 
 }
 
