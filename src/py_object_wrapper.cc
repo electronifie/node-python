@@ -54,7 +54,7 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
 
 NAN_GETTER(Get) {
     Nan::EscapableHandleScope();
-    PyObjectWrapper* wrapper = node::ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
+    PyObjectWrapper* wrapper = node::ObjectWrap::Unwrap<PyObjectWrapper>(info.This());
     String::Utf8Value utf8_key(key);
     string value(*utf8_key);
     PyObject* result = wrapper->InstanceGet(value);
@@ -89,21 +89,21 @@ NAN_GETTER(ValueOfAccessor) {
 
 NAN_METHOD(PyObjectWrapper::Call) {
     Nan::EscapableHandleScope();
-    PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
-    Handle<Value> result = pyobjwrap->InstanceCall(args);
+    PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(info.This());
+    Handle<Value> result = pyobjwrap->InstanceCall(info);
     Nan::EscapableHandleScope(result);
 }
 
 NAN_METHOD(PyObjectWrapper::ToString) {
     Nan::EscapableHandleScope;
-    PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
-    Local<String> result = Nan::New<String>(pyobjwrap->InstanceToString(args).c_str());
+    PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(info.This());
+    Local<String> result = Nan::New<String>(pyobjwrap->InstanceToString(info).c_str());
     Nan::EscapableHandleScope(result);
 }
 
 NAN_METHOD(PyObjectWrapper::ValueOf) {
     Nan::EscapableHandleScope();
-    PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
+    PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(info.This());
     PyObject* py_obj = pyobjwrap->InstanceGetPyObject();
     if(PyCallable_Check(py_obj)) {
         Local<FunctionTemplate> call = Nan::New<FunctionTemplate>(Call);
@@ -336,10 +336,10 @@ NAN_METHOD(PyObjectWrapper::InstanceCall) {
     // for now, we don't do anything.
     HandleScope scope;
 
-    int len = args.Length();
+    int len = info.Length();
     PyObject* args_tuple = PyTuple_New(len);
     for (int i = 0; i < len; ++i) {
-        PyTuple_SET_ITEM(args_tuple, i, ConvertToPython(args[i]));
+        PyTuple_SET_ITEM(args_tuple, i, ConvertToPython(info[i]));
     }
 
     PyObject* result = PyObject_CallObject(mPyObject, args_tuple);

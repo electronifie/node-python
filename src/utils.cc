@@ -18,14 +18,14 @@ Handle<Value> ThrowPythonException() {
     Local<v8::String> msg = Nan::New<String>("Python Error: ").ToLocalChecked();
 
     if (ptype != NULL) {
-        msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))));
-        msg = v8::String::Concat(msg, Nan::New<String>(": "));
+        msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))).ToLocalChecked());
+        msg = v8::String::Concat(msg, Nan::New<String>(": ").ToLocalChecked());
 
         if (pvalue != NULL) {
-            msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(pvalue))));
+            msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(pvalue))).ToLocalChecked());
         }
 
-        msg = v8::String::Concat(msg, Nan::New<String>("\n"));
+        msg = v8::String::Concat(msg, Nan::New<String>("\n").ToLocalChecked());
     }
 
     if (ptraceback != NULL) {
@@ -55,11 +55,11 @@ Handle<Value> ThrowPythonException() {
             Py_DECREF(pystr);
             Py_DECREF(str);
 
-            msg = v8::String::Concat(msg, Nan::New<String>("\n"));
-            msg = v8::String::Concat(msg, Nan::New<String>(full_backtrace));
+            msg = v8::String::Concat(msg, Nan::New<String>("\n").ToLocalChecked());
+            msg = v8::String::Concat(msg, Nan::New<String>(full_backtrace).ToLocalChecked());
         } else {
-            msg = v8::String::Concat(msg, Nan::New<String>("\n"));
-            msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(ptraceback))));
+            msg = v8::String::Concat(msg, Nan::New<String>("\n").ToLocalChecked());
+            msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(ptraceback))).ToLocalChecked());
         }
 
     }
