@@ -15,7 +15,7 @@ Handle<Value> ThrowPythonException() {
     }
 
     // handle exception message
-    Local<v8::String> msg = Nan::New<String>("Python Error: ");
+    Local<v8::String> msg = Nan::New<String>("Python Error: ").ToLocalChecked();
 
     if (ptype != NULL) {
         msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))));
