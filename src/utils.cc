@@ -11,21 +11,21 @@ Handle<Value> ThrowPythonException() {
 
     // maybe useless to protect against bad use of ThrowPythonException ?
     if(pvalue == NULL) {
-        NanThrowError("No exception found");
+        Nan::ThrowError("No exception found");
     }
 
     // handle exception message
-    Local<v8::String> msg = NanNew<String>("Python Error: ");
+    Local<v8::String> msg = Nan::New<String>("Python Error: ");
 
     if (ptype != NULL) {
-        msg = v8::String::Concat(msg, NanNew<String>(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))));
-        msg = v8::String::Concat(msg, NanNew<String>(": "));
+        msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(PyObject_GetAttrString(ptype, "__name__")))));
+        msg = v8::String::Concat(msg, Nan::New<String>(": "));
 
         if (pvalue != NULL) {
-            msg = v8::String::Concat(msg, NanNew<String>(PyString_AsString(PyObject_Str(pvalue))));
+            msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(pvalue))));
         }
 
-        msg = v8::String::Concat(msg, NanNew<String>("\n"));
+        msg = v8::String::Concat(msg, Nan::New<String>("\n"));
     }
 
     if (ptraceback != NULL) {
@@ -55,11 +55,11 @@ Handle<Value> ThrowPythonException() {
             Py_DECREF(pystr);
             Py_DECREF(str);
 
-            msg = v8::String::Concat(msg, NanNew<String>("\n"));
-            msg = v8::String::Concat(msg, NanNew<String>(full_backtrace));
+            msg = v8::String::Concat(msg, Nan::New<String>("\n"));
+            msg = v8::String::Concat(msg, Nan::New<String>(full_backtrace));
         } else {
-            msg = v8::String::Concat(msg, NanNew<String>("\n"));
-            msg = v8::String::Concat(msg, NanNew<String>(PyString_AsString(PyObject_Str(ptraceback))));
+            msg = v8::String::Concat(msg, Nan::New<String>("\n"));
+            msg = v8::String::Concat(msg, Nan::New<String>(PyString_AsString(PyObject_Str(ptraceback))));
         }
 
     }
@@ -84,5 +84,5 @@ Handle<Value> ThrowPythonException() {
     Py_XDECREF(pvalue);
     Py_XDECREF(ptraceback);
 
-    NanThrowError(err);
+    Nan::ThrowError(err);
 }

@@ -8,11 +8,11 @@
 Persistent<FunctionTemplate> PyObjectWrapper::py_function_template;
 
 void PyObjectWrapper::Initialize() {
-    NanScope();
+    Nan::HandleScope();
 
     PyDateTime_IMPORT;
 
-    Local<FunctionTemplate> fn_tpl = NanNew<FunctionTemplate>();
+    Local<FunctionTemplate> fn_tpl = Nan::New<FunctionTemplate>();
     Local<ObjectTemplate> proto = fn_tpl->PrototypeTemplate();
     Local<ObjectTemplate> obj_tpl = fn_tpl->InstanceTemplate();
 
@@ -22,19 +22,19 @@ void PyObjectWrapper::Initialize() {
     obj_tpl->SetNamedPropertyHandler(Get, Set);
 
     // If we're calling `toString`, delegate to our version of ToString
-    proto->SetAccessor(NanNew<String>("toString"), ToStringAccessor);
+    proto->SetAccessor(Nan::New<String>("toString"), ToStringAccessor);
 
     // likewise for valueOf
-    obj_tpl->SetAccessor(NanNew<String>("valueOf"), ValueOfAccessor);
+    obj_tpl->SetAccessor(Nan::New<String>("valueOf"), ValueOfAccessor);
 
     // Python objects can be called as functions.
     obj_tpl->SetCallAsFunctionHandler(Call, Handle<Value>());
 
-    py_function_template = NanNew<FunctionTemplate>(fn_tpl);
+    py_function_template = Nan::New<FunctionTemplate>(fn_tpl);
 }
 
 Handle<Value> PyObjectWrapper::New(PyObject* obj) {
-    NanEscapableScope();
+    Nan::EscapableHandleScope();
     Local<Value> jsObj;
 
     try {
@@ -49,17 +49,17 @@ Handle<Value> PyObjectWrapper::New(PyObject* obj) {
         return ThrowPythonException();
     }
 
-    NanEscapeScope(jsObj);
+    Nan::EscapableHandleScope(jsObj);
 }
 
 NAN_GETTER(Get) {
-    NanEscapableScope();
+    Nan::EscapableHandleScope();
     PyObjectWrapper* wrapper = node::ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     String::Utf8Value utf8_key(key);
     string value(*utf8_key);
     PyObject* result = wrapper->InstanceGet(value);
     if(result) {
-        return NanEscapeScope(PyObjectWrapper::New(result));
+        return Nan::HandleScope(PyObjectWrapper::New(result));
     }
     return Handle<Value>();
 }
@@ -70,50 +70,50 @@ NAN_SETTER(Set) {
 }
 
 NAN_GETTER(CallAccessor) {
-    NanEscapableScope();
-    Local<FunctionTemplate> func = NanNew<FunctionTemplate>(PyObjectWrapper::Call);
-    NanEscapeScope(func->GetFunction());
+    Nan::EscapableHandleScope();
+    Local<FunctionTemplate> func = Nan::New<FunctionTemplate>(PyObjectWrapper::Call);
+    Nan::EscapableHandleScope(func->GetFunction());
 }
 
 NAN_GETTER(ToStringAccessor) {
-    NanEscapableScope();
-    Local<FunctionTemplate> func = NanNew<FunctionTemplate>(PyObjectWrapper::ToString);
-    NanEscapeScope(func->GetFunction());
+    Nan::EscapableHandleScope();
+    Local<FunctionTemplate> func = Nan::New<FunctionTemplate>(PyObjectWrapper::ToString);
+    Nan::EscapableHandleScope(func->GetFunction());
 }
 
 NAN_GETTER(ValueOfAccessor) {
-    NanEscapableScope();
-    Local<FunctionTemplate> func = NanNew<FunctionTemplate>(PyObjectWrapper::ValueOf);
-    NanEscapeScope(func->GetFunction());
+    Nan::EscapableHandleScope();
+    Local<FunctionTemplate> func = Nan::New<FunctionTemplate>(PyObjectWrapper::ValueOf);
+    Nan::EscapableHandleScope(func->GetFunction());
 }
 
 NAN_METHOD(PyObjectWrapper::Call) {
-    NanEscapableScope();
+    Nan::EscapableHandleScope();
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     Handle<Value> result = pyobjwrap->InstanceCall(args);
-    NanEscapeScope(result);
+    Nan::EscapableHandleScope(result);
 }
 
 NAN_METHOD(PyObjectWrapper::ToString) {
-    NanEscapableScope;
+    Nan::EscapableHandleScope;
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
-    Local<String> result = NanNew<String>(pyobjwrap->InstanceToString(args).c_str());
-    NanEscapeScope(result);
+    Local<String> result = Nan::New<String>(pyobjwrap->InstanceToString(args).c_str());
+    Nan::EscapableHandleScope(result);
 }
 
 NAN_METHOD(PyObjectWrapper::ValueOf) {
-    NanEscapableScope();
+    Nan::EscapableHandleScope();
     PyObjectWrapper* pyobjwrap = ObjectWrap::Unwrap<PyObjectWrapper>(args.This());
     PyObject* py_obj = pyobjwrap->InstanceGetPyObject();
     if(PyCallable_Check(py_obj)) {
-        Local<FunctionTemplate> call = NanNew<FunctionTemplate>(Call);
-        NanEscapeScope(call->GetFunction());
+        Local<FunctionTemplate> call = Nan::New<FunctionTemplate>(Call);
+        Nan::EscapableHandleScope(call->GetFunction());
     } else if (PyNumber_Check(py_obj)) {
         long long_result = PyLong_AsLong(py_obj);
-        NanEscapeScope(NanNew<Integer>(long_result));
+        Nan::EscapableHandleScope(Nan::New<Integer>(long_result));
     } else if (PySequence_Check(py_obj)) {
         int len = PySequence_Length(py_obj);
-        Local<Array> array = NanNew<Array>(len);
+        Local<Array> array = Nan::New<Array>(len);
         for(int i = 0; i < len; ++i) {
             Handle<Object> jsobj = PyObjectWrapper::py_function_template->GetFunction()->NewInstance();
             PyObject* py_obj_out = PySequence_GetItem(py_obj, i);
@@ -121,7 +121,7 @@ NAN_METHOD(PyObjectWrapper::ValueOf) {
             obj_out->Wrap(jsobj);
             array->Set(i, jsobj);
         }
-        NanEscapeScope(array);
+        Nan::EscapableHandleScope(array);
     } else if (PyMapping_Check(py_obj)) {
         int len = PyMapping_Length(py_obj);
         Local<Object> object = Object::New();
@@ -136,7 +136,7 @@ NAN_METHOD(PyObjectWrapper::ValueOf) {
         }
         Py_XDECREF(keys);
         Py_XDECREF(values);
-        NanEscapeScope(object);
+        Nan::EscapableHandleScope(object);
     }
     NanReturnUndefined();
 }

@@ -53,7 +53,7 @@ class PyObjectWrapper : public node::ObjectWrap {
 
         NAN_METHOD(InstanceCall);
 
-        string InstanceToString(_NAN_METHOD_ARGS_TYPE args);
+        string InstanceToString(Nan::NAN_METHOD_ARGS_TYPE args);
 
         PyObject* InstanceGet(const string& key);
 };
