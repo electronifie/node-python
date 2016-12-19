@@ -30,13 +30,13 @@
   "gypfile": true,
   "readmeFilename": "README.md",
   "dependencies": {
-    "bindings": "~1.1.1",
-    "debug": "^1.0.4",
-    "nan": "^1.7.0"
+    "bindings": "~1.2.1",
+    "debug": "^2.4.5",
+    "nan": "^2.4.0"
   },
   "devDependencies": {
-    "mocha": "^1.21.3",
-    "should": "^4.0.4",
-    "sinon": "^1.10.3"
+    "mocha": "^3.2.0",
+    "should": "^11.1.2",
+    "sinon": "^1.17.6"
   }
 }
